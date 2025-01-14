@@ -48,10 +48,10 @@ jobs:
           # Deploy to EC2
           ssh -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.AWS_INSTANCE_IP }} << 'EOF'
             # Navigate to project directory
-            cd /var/www/html/Horeca-Store
+            cd /var/www/html/UAE_HORECA_LARAVEL
             
             # Fix Git ownership issue
-            sudo git config --global --add safe.directory /var/www/html/Horeca-Store
+            sudo git config --global --add safe.directory /var/www/html/UAE_HORECA_LARAVEL
             sudo git config --global --add safe.directory '*'
             
             # Debug information
@@ -113,7 +113,7 @@ jobs:
       - name: Verify deployment
         run: |
           ssh -i ~/.ssh/id_ed25519 ubuntu@${{ secrets.AWS_INSTANCE_IP }} << 'EOF'
-            cd /var/www/html/Horeca-Store
+            cd /var/www/html/UAE_HORECA_LARAVEL
             echo "Application version:"
             sudo php artisan --version
             echo "Current git commit:"
