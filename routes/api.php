@@ -45,8 +45,23 @@ use App\Http\Controllers\API\CountryController;
  use App\Http\Controllers\API\AddressController;
  use App\Http\Controllers\API\PopularPostsController;
  use App\Http\Controllers\API\SquarePaymentController;
+ use App\Http\Controllers\API\CategoryMenuController;
+ use App\Http\Controllers\API\CategoriesHomeLimitController;
+ use App\Http\Controllers\API\CategoryWithSlugController;
+ use App\Http\Controllers\Api\EmailNotificationController;
 
- Route::post('/payment-square', [SquarePaymentController::class, 'processPayment']);
+Route::post('/send-confirmation-email', [EmailNotificationController::class, 'sendConfirmationEmail']);
+
+
+// For slug-based category fetching with children
+Route::get('category-with-slug/{slug}', [CategoryWithSlugController::class, 'showCategoryBySlug']);
+
+
+Route::get('/home-categories', [CategoriesHomeLimitController::class, 'fetchCategories']);
+
+Route::get('/categories-menu', [CategoryMenuController::class, 'getCategoriesWithChildren']);
+
+ Route::post('/payment-square', [SquarePaymentController::class, 'createPayment']);
  
 
 
@@ -154,6 +169,7 @@ Route::get('/customers', [CustomerController::class, 'index']);
  Route::get('/brandguestproducts', [BrandApiController::class, 'getAllBrandGuestProducts']);
 
 Route::middleware('auth:sanctum')->get('/brandproducts', [BrandApiController::class, 'getAllBrandProducts']);
+Route::middleware('auth:sanctum')->get('/homebrandproducts', [BrandApiController::class, 'getAllHomeBrandProducts']);
 
 Route::middleware('auth:sanctum')->get('/categoryproducts', [CategoryApiController::class, 'getAllFeaturedProductsByCategory']);
 
@@ -253,7 +269,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
 });
 
-// Routes for guest users
+// Routes for guest userss
 Route::middleware('web')->group(function () {
 
 });
@@ -270,7 +286,10 @@ Route::middleware('web')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders', [OrderApiController::class, 'index']);
         Route::post('/orders', [OrderApiController::class, 'store']);
+     
         Route::get('/orders/{id}', [OrderApiController::class, 'show']);
         Route::put('/orders/{id}', [OrderApiController::class, 'update']);
         Route::delete('/orders/{id}', [OrderApiController::class, 'destroy']);
     });
+    Route::post('/orders/latest', [OrderApiController::class, 'getLatestOrder']);
+    Route::post('/guest-orders', [OrderApiController::class, 'storeGuest']);

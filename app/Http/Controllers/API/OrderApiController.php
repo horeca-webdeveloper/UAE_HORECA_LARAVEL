@@ -18,6 +18,7 @@ use Botble\Payment\Models\Payment;
 use Botble\Ecommerce\Enums\OrderStatusEnum;
 use Botble\Ecommerce\Enums\OrderHistoryActionEnum;
 use Botble\Payment\Enums\PaymentStatusEnum;
+use Illuminate\Support\Facades\DB;
 
 class OrderApiController extends Controller
 {
@@ -137,6 +138,157 @@ class OrderApiController extends Controller
                     $orderAddress->order_id = $order->id;
                     $orderAddress->save();
                 }
+
+                foreach ($request->products as $product) {
+                    $productDetail = Product::find($product['id']);
+
+                    $orderProduct = new OrderProduct();
+                    $orderProduct->order_id = $order->id;
+                    $orderProduct->product_id = $productDetail->id;
+                    $orderProduct->product_name = $productDetail->name;
+                    $orderProduct->product_image = $productDetail->image;
+                    $orderProduct->qty = $product['quantity'];
+                    $orderProduct->weight = $productDetail->weight;
+                    $orderProduct->price = $productDetail->original_price;
+                    $orderProduct->tax_amount = $productDetail->tax_price ?? 0;
+                    $orderProduct->product_options = $productDetail->cart_options ?? null;
+                    $orderProduct->options = $productDetail->cart_options ?? null;
+                    $orderProduct->product_type = $productDetail->product_type;
+                    $orderProduct->save();
+                }
+            }
+
+            // Return the created order as JSON, including all the necessary fields
+            return response()->json([
+                'success' => true,
+                'message' => "Order Placed Successfully",
+                'data' => [
+                    'order_id' => $order->id,
+                    'amount' => $order->amount,
+                ]
+            ], 201);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function storeGuest(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'shipping_method' => 'required|string',
+            'products' => 'required|array',
+            'products.*.id' => 'required|exists:ec_products,id',
+            'products.*.quantity' => 'required|integer|min:1',
+            'customerAddressName' => 'required|string',
+            'customerAddressPhone' => 'required|string',
+            'customerAddressEmail' => 'required|email',
+            'customerAddressState' => 'required|string',
+            'customerAddressCity' => 'required|string',
+            'customerAddressZipCode' => 'required|string',
+            'customerAddressCountry' => 'required|string',
+            'customerAddressAddress' => 'required|string',
+        ]);
+        
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()
+            ], 400);
+        }
+        try {
+           
+            // Create the order
+            $order = new Order();
+            $order->user_id = 0; // Use the authenticated user's ID
+            $order->shipping_option = $request->shipping_option ?? null;
+            $order->shipping_method = $request->shipping_method ?? null;
+            $order->status = OrderStatusEnum::PROCESSING;
+            $order->amount = $request->amount ?? null;
+            $order->tax_amount = $request->tax_amount ?? null;
+            $order->shipping_amount = $request->shipping_amount ?? null;
+            $order->description = $request->note ?? null;
+            $order->coupon_code = $request->coupon_code ?? null;
+            $order->discount_amount = $request->discount_amount ?? null;
+            $order->sub_total = $request->sub_amount ?? null;
+            $order->is_confirmed = $request->is_confirmed ?? 0;
+            $order->discount_description = $request->discount_description ?? null;
+            $order->is_finished = $request->is_finished ?? 0;
+            $order->token = $request->token ?? null;
+            $order->created_at = now();
+            $order->updated_at = now();
+            $order->proof_file = $request->proof_file ?? null;
+            $order->store_id = $request->store_id ?? null;
+            $order->save();
+
+            if ($order) {
+                OrderHistory::query()->create([
+                    'action' => OrderHistoryActionEnum::CREATE_ORDER_FROM_ADMIN_PAGE,
+                    'description' => trans('plugins/ecommerce::order.create_order_from_admin_page'),
+                    'order_id' => $order->id,
+                ]);
+
+                OrderHistory::query()->create([
+                    'action' => OrderHistoryActionEnum::CREATE_ORDER,
+                    'description' => trans(
+                        'plugins/ecommerce::order.new_order',
+                        ['order_id' => $order->code]
+                    ),
+                    'order_id' => $order->id,
+                ]);
+
+                OrderHistory::query()->create([
+                    'action' => OrderHistoryActionEnum::CONFIRM_ORDER,
+                    'description' => trans('plugins/ecommerce::order.order_was_verified_by'),
+                    'order_id' => $order->id,
+                    'user_id' =>  $order->user_id,
+                ]);
+
+                if ($request->payment_channel) {
+                    $payment = new Payment();
+                    $payment->currency = cms_currency()->getDefaultCurrency()->title;
+                    $payment->user_id = $order->user_id;
+                    $payment->charge_id = Str::upper(Str::random(10));
+                    $payment->payment_channel = $request->payment_channel;
+                    $payment->amount = $request->amount;
+                    $payment->order_id = $order->id;
+                    $payment->status = $request->payment_status;
+                    $payment->payment_type = $request->payment_type;
+                    $payment->customer_id =  null;
+                    $payment->created_at = now();
+                    $payment->updated_at = now();
+                    $payment->customer_type = Customer::class;
+                    $payment->save();
+
+                    $order->payment_id = $payment->id;
+                    $order->save();
+
+                    if ($request->payment_status == PaymentStatusEnum::COMPLETED) {
+                        OrderHistory::query()->create([
+                            'action' => OrderHistoryActionEnum::CONFIRM_PAYMENT,
+                            'description' => trans('plugins/ecommerce::order.payment_was_confirmed_by', [
+                                'money' => format_price($order->amount),
+                            ]),
+                            'order_id' => $order->id,
+                            'user_id' =>   $order->user_id,
+                        ]);
+                    }
+                }
+
+                $orderAddress = new OrderAddress();
+                $orderAddress->order_id = $order->id; // Associate the address with the order
+                $orderAddress->name = $request->customerAddressName;
+                $orderAddress->phone = $request->customerAddressPhone;
+                $orderAddress->email = $request->customerAddressEmail;
+                $orderAddress->state = $request->customerAddressState;
+                $orderAddress->city = $request->customerAddressCity;
+                $orderAddress->zip_code = $request->customerAddressZipCode;
+                $orderAddress->country = $request->customerAddressCountry;
+                $orderAddress->address = $request->customerAddressAddress;
+                $orderAddress->save();
+             
 
                 foreach ($request->products as $product) {
                     $productDetail = Product::find($product['id']);
@@ -366,6 +518,233 @@ public function index(Request $request)
 
     // Return the orders with the product details as a JSON response
     return response()->json($orders);
+}
+// public function getLatestOrder(Request $request)
+// {
+//     // Retrieve the latest order for the logged-in user
+//     $latestOrder = Order::where('user_id', $request->user()->id)
+//         ->latest('created_at')
+//         ->first();
+
+//     // If no order is found, return a message
+//     if (!$latestOrder) {
+//         return response()->json(['message' => 'No orders found'], 404);
+//     }
+
+//     // Process the order to extract product details from the 'description' field
+//     if ($latestOrder->description) {
+//         // Decode the 'description' field (JSON data)
+//         $productDetails = json_decode($latestOrder->description, true);
+
+//         // Ensure the decoded JSON is an array
+//         if (is_array($productDetails)) {
+//             $products = [];
+
+//             // Loop through each product in the 'description' field and retrieve product data
+//             foreach ($productDetails as $item) {
+//                 $product = Product::find($item['product_id']);
+
+//                 if ($product) {
+//                     $products[] = [
+//                         'product_id' => $product->id,
+//                         'name' => $product->name,
+//                         'price' => $item['price'],
+//                         'sale_price' => $product->sale_price,
+//                         'quantity' => $item['quantity'],
+//                         'description' => $product->description,
+//                         'images' => $product->images
+//                     ];
+//                 }
+//             }
+
+//             // Attach the product details to the order
+//             $latestOrder->setAttribute('products', $products);
+//         } else {
+//             $latestOrder->setAttribute('products', []);
+//         }
+//     } else {
+//         $latestOrder->setAttribute('products', []);
+//     }
+
+//     // Return the latest order with product details as a JSON response
+//     return response()->json($latestOrder);
+// }
+
+// public function getLatestOrder(Request $request)
+// {
+//     // Validate the email address in the request
+//     $request->validate([
+//         'email' => 'required|email',
+//     ]);
+
+//     // Retrieve the latest order based on the email in the ec_order_addresses table
+//     $latestOrder = Order::join('ec_order_addresses', 'ec_orders.id', '=', 'ec_order_addresses.order_id')
+//         ->where('ec_order_addresses.email', $request->email)
+//         ->select('ec_orders.*') // Select all columns from ec_orders
+//         ->latest('ec_orders.created_at')
+//         ->first();
+
+//     // If no order is found, return a message
+//     if (!$latestOrder) {
+//         return response()->json(['message' => 'No orders found'], 404);
+//     }
+
+//     // Process the order to extract product details from the 'description' field
+//     if ($latestOrder->description) {
+//         // Decode the 'description' field (JSON data)
+//         $productDetails = json_decode($latestOrder->description, true);
+
+//         // Ensure the decoded JSON is an array
+//         if (is_array($productDetails)) {
+//             $products = [];
+
+//             // Loop through each product in the 'description' field and retrieve product data
+//             foreach ($productDetails as $item) {
+//                 $product = Product::find($item['product_id']);
+
+//                 if ($product) {
+//                     $products[] = [
+//                         'product_id' => $product->id,
+//                         'name' => $product->name,
+//                         'price' => $item['price'],
+//                         'sale_price' => $product->sale_price,
+//                         'quantity' => $item['quantity'],
+//                         'description' => $product->description,
+//                         'images' => $product->images
+//                     ];
+//                 }
+//             }
+
+//             // Attach the product details to the order
+//             $latestOrder->setAttribute('products', $products);
+//         } else {
+//             $latestOrder->setAttribute('products', []);
+//         }
+//     } else {
+//         $latestOrder->setAttribute('products', []);
+//     }
+
+//     // Return the latest order with product details as a JSON response
+//     return response()->json($latestOrder);
+// }
+
+
+
+// public function getLatestOrder(Request $request)
+// {
+//     // Validate the email address in the request
+//     $request->validate([
+//         'email' => 'required|email',
+//     ]);
+
+//     // Retrieve the latest order based on the email in the ec_order_addresses table
+//     $latestOrder = Order::join('ec_order_addresses', 'ec_orders.id', '=', 'ec_order_addresses.order_id')
+//         ->where('ec_order_addresses.email', $request->email)
+//         ->select('ec_orders.*') // Select all columns from ec_orders
+//         ->latest('ec_orders.created_at')
+//         ->first();
+
+//     // If no order is found, return a message
+//     if (!$latestOrder) {
+//         return response()->json(['message' => 'No orders found'], 404);
+//     }
+
+//     // Fetch the products associated with the order via the ec_order_product table
+//     $products = DB::table('ec_order_product')
+//         ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+//         ->where('ec_order_product.order_id', $latestOrder->id)
+//         ->select(
+//             'ec_products.id as product_id',
+//             'ec_products.name',
+//             'ec_products.sale_price',
+//             'ec_products.description',
+//             'ec_products.images',
+//             'ec_order_product.price',
+//             'ec_order_product.qty'
+//         )
+//         ->get()
+//         ->map(function ($product) {
+//             // Decode the images field if it's JSON-encoded and get the first URL
+//             if ($product->images) {
+//                 $images = json_decode($product->images, true);
+//                 // Return the first image URL, or the whole array if you want to return all
+//                 $product->images = is_array($images) ? $images[0] : $product->images;
+//             }
+//             return $product;
+//         });
+
+//     // Attach the products to the latest order
+//     $latestOrder->setAttribute('products', $products);
+
+//     // Return the latest order with product details as a JSON response
+//     return response()->json($latestOrder);
+// }
+
+public function getLatestOrder(Request $request)
+{
+    // Validate the email address in the request
+    $request->validate([
+        'email' => 'required|email',
+    ]);
+
+    // Retrieve the latest order based on the email in the ec_order_addresses table
+    $latestOrder = Order::join('ec_order_addresses', 'ec_orders.id', '=', 'ec_order_addresses.order_id')
+        ->where('ec_order_addresses.email', $request->email)
+        ->select('ec_orders.*') // Select all columns from ec_orders
+        ->latest('ec_orders.created_at')
+        ->first();
+
+    // If no order is found, return a message
+    if (!$latestOrder) {
+        return response()->json(['message' => 'No orders found'], 404);
+    }
+
+    // Fetch the products associated with the order via the ec_order_product table
+    $products = DB::table('ec_order_product')
+        ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+        ->where('ec_order_product.order_id', $latestOrder->id)
+        ->select(
+            'ec_products.id as product_id',
+            'ec_products.name',
+            'ec_products.sale_price',
+            'ec_products.delivery_days',
+            'ec_products.images',
+            'ec_order_product.price',
+            'ec_order_product.qty'
+        )
+        ->get()
+        ->map(function ($product) {
+            // Decode the images field if it's JSON-encoded and get the first URL
+            if ($product->images) {
+                $images = json_decode($product->images, true);
+
+                // If images are in an array, process them
+                if (is_array($images)) {
+                    $images = array_map(function ($image) {
+                        // Check if image URL starts with 'http' or 'https'
+                        if (!preg_match('/^https?:\/\//', $image)) {
+                            // Check if the path starts with 'storage/' or 'storage/products/'
+                            if (strpos($image, 'storage/') === 0) {
+                                $image = asset($image);  // Prepend the base URL
+                            } elseif (strpos($image, 'storage/products/') === 0) {
+                                $image = asset($image);  // Prepend the base URL
+                            }
+                        }
+                        return $image;
+                    }, $images);
+                }
+
+                // Return the images array (or first image, depending on your need)
+                $product->images = $images;
+            }
+            return $product;
+        });
+
+    // Attach the products to the latest order
+    $latestOrder->setAttribute('products', $products);
+
+    // Return the latest order with product details as a JSON response
+    return response()->json($latestOrder);
 }
 
 

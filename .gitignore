@@ -60,6 +60,8 @@ resources/docs
 /storage/framework/*.txt
 /storage/installing
 /storage/installed
+/storage/temp
+public/storage/products/*
 
 /lang/*
 !/lang/en
