@@ -44,7 +44,7 @@ class CategoryProductTypeController extends BaseController
 	}
 
 	/**
-	 * Display the specified resource.
+	 * Display the specified resource.dasd
 	 */
 	public function edit($id)
 	{
