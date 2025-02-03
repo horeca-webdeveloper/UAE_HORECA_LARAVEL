@@ -48,7 +48,8 @@ use App\Http\Controllers\API\CountryController;
  use App\Http\Controllers\API\CategoryMenuController;
  use App\Http\Controllers\API\CategoriesHomeLimitController;
  use App\Http\Controllers\API\CategoryWithSlugController;
- use App\Http\Controllers\Api\EmailNotificationController;
+ use App\Http\Controllers\API\EmailNotificationController;
+ use App\Http\Controllers\API\ProductSpecificationApiController;
 
 Route::post('/send-confirmation-email', [EmailNotificationController::class, 'sendConfirmationEmail']);
 
@@ -58,7 +59,7 @@ Route::get('category-with-slug/{slug}', [CategoryWithSlugController::class, 'sho
 
 
 Route::get('/home-categories', [CategoriesHomeLimitController::class, 'fetchCategories']);
-
+Route::get('/all-categories', [CategoriesHomeLimitController::class, 'fetchAllCategories']);
 Route::get('/categories-menu', [CategoryMenuController::class, 'getCategoriesWithChildren']);
 
  Route::post('/payment-square', [SquarePaymentController::class, 'createPayment']);
@@ -119,6 +120,10 @@ Route::get('/search', [SearchApiController::class, 'search']);
 
 
 Route::get('/location', [LocationController::class, 'getLocation']);
+Route::get('/get-coordinates', [LocationController::class, 'getCoordinates']);
+// Route::get('/get-location', [LocationController::class, 'getRealTimeLocation']);
+Route::post('/get-location', [LocationController::class, 'getAddress']);
+
 Route::get('categories/{id}/products', [CategoryController::class, 'getProductsByCategory']);
 Route::get('categories/filters', [CategoryController::class, 'getSpecificationFilters']);
 Route::post('categories/specification-filters', [CategoryController::class, 'getSpecificationFilters']);
@@ -198,6 +203,7 @@ Route::middleware('auth:sanctum')->post('/logout', [CustomerController::class, '
 // Authenticated route (only accessible by authenticated users)
 // Route::middleware('auth:sanctum')->get('/products', [ProductApiController::class, 'getAllProducts']);
     Route::get('/products-guest', [ProductApiController::class, 'getAllPublicProducts']);
+    Route::get('/product-public-listing-guest', [ProductApiController::class, 'getAllProductsLisingGuest']);
 
 Route::middleware('auth:sanctum')->group(function () {
 
@@ -205,7 +211,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/products', [ProductApiController::class, 'getAllProducts']);
     Route::get('/product-listing', [ProductApiController::class, 'getAllProductsLising']);
-    Route::get('/product-public-listing-guest', [ProductApiController::class, 'getAllProductsLisingGuest']);
 
 
     // Routes for logged-in users
@@ -287,6 +292,7 @@ Route::middleware('web')->group(function () {
         Route::get('/orders', [OrderApiController::class, 'index']);
         Route::post('/orders', [OrderApiController::class, 'store']);
         Route::get('/reorder', [OrderApiController::class, 'reorder']);
+        Route::get('/by-it-again', [OrderApiController::class, 'byitagain']);
         Route::post('/reorder/{orderId}', [OrderApiController::class, 'reorderToCart']);
         Route::get('/orders/{id}', [OrderApiController::class, 'show']);
         Route::put('/orders/{id}', [OrderApiController::class, 'update']);
@@ -294,3 +300,6 @@ Route::middleware('web')->group(function () {
     });
     Route::post('/orders/latest', [OrderApiController::class, 'getLatestOrder']);
     Route::post('/guest-orders', [OrderApiController::class, 'storeGuest']);
+
+
+Route::get('/product-specifications', [ProductSpecificationApiController::class, 'getProductSpecifications']); // No productId in the URL

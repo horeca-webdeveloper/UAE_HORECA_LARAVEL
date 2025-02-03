@@ -19,6 +19,11 @@ use Botble\Ecommerce\Enums\OrderStatusEnum;
 use Botble\Ecommerce\Enums\OrderHistoryActionEnum;
 use Botble\Payment\Enums\PaymentStatusEnum;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Botble\Ecommerce\Models\Cart;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage; // Import the Storage facade
+
 
 class OrderApiController extends Controller
 {
@@ -460,65 +465,521 @@ private function calculateTotalAmount(array $products, float $sub_total): float
     //     $orders = Order::where('user_id', $request->user()->id)->get();
     //     return response()->json($orders);
     // }
+// public function index(Request $request)
+// {
+//     // Retrieve the orders for the logged-in user, including related data
+//     $orders = Order::where('user_id', $request->user()->id)->get();
+
+//     // If no orders are found, return a message
+//     if ($orders->isEmpty()) {
+//         return response()->json(['message' => 'No orders found'], 404);
+//     }
+
+//     // Iterate through each order and extract product details from the 'description' field
+//     $orders->transform(function ($order) {
+//         // Check if the 'description' field is not empty or null
+//         if ($order->description) {
+//             // Decode the 'description' field (which contains JSON data)
+//             $productDetails = json_decode($order->description, true);
+
+//             // Ensure the decoded JSON is an array
+//             if (is_array($productDetails)) {
+//                 // Initialize an array to store the product details
+//                 $products = [];
+
+//                 // Loop through each product in the 'description' field and retrieve product data
+//                 foreach ($productDetails as $item) {
+//                     // Fetch the product details from the 'ec_products' table based on the 'product_id'
+//                     $product = Product::find($item['product_id']);
+
+//                     // If the product exists, add the necessary details
+//                     if ($product) {
+//                         $products[] = [
+//                             'product_id' => $product->id,
+//                             'name' => $product->name,
+//                             'price' => $item['price'],
+//                              'sale_price' => $product->sale_price,
+//                             'quantity' => $item['quantity'],
+//                             'description' => $product->description,  // Include other details as needed
+//                             'images' => $product-> images
+//                         ];
+//                     }
+//                 }
+
+//                 // Attach the product details to the order as a custom attribute
+//                 $order->setAttribute('products', $products);
+//             } else {
+//                 // If the description is not a valid array, set products to an empty array
+//                 $order->setAttribute('products', []);
+//             }
+//         } else {
+//             // If description is null or empty, set products to an empty array
+//             $order->setAttribute('products', []);
+//         }
+
+//         // Return the updated order with the product details
+//         return $order;
+//     });
+
+//     // Return the orders with the product details as a JSON response
+//     return response()->json($orders);
+// }
+
+
+
+// public function index(Request $request)
+// {
+//     // Retrieve all orders for the authenticated user
+//     $orders = Order::where('user_id', $request->user()->id)
+//         ->orderBy('created_at', 'desc')
+//         ->get();
+
+//     // If no orders are found, return a message
+//     if ($orders->isEmpty()) {
+//         return response()->json(['message' => 'No orders found'], 404);
+//     }
+
+//     // Transform each order to include its associated products
+//     $orders->transform(function ($order) {
+//         // Fetch the products associated with the order via the `ec_order_product` table
+//         $products = DB::table('ec_order_product')
+//             ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+//             ->where('ec_order_product.order_id', $order->id)
+//             ->select(
+//                 'ec_products.id as product_id',
+//                 'ec_products.name',
+//                 'ec_products.sale_price',
+//                 'ec_products.delivery_days',
+//                 'ec_products.images',
+//                 'ec_order_product.price',
+//                 'ec_order_product.qty'
+//             )
+//             ->get()
+//             ->map(function ($product) {
+//                 // Decode the images field if it's JSON-encoded and process the URLs
+//                 if ($product->images) {
+//                     $images = json_decode($product->images, true);
+
+//                     if (is_array($images)) {
+//                         // Use array_map to process each image URL
+//                         $images = array_map(function ($image) {
+//                             // If the image URL already starts with http or https, don't modify it
+//                             if (!preg_match('/^https?:\/\//', $image)) {
+//                                 // Check if the path starts with 'storage/' or 'storage/products/'
+//                                 if (strpos($image, 'storage/') === 0 || strpos($image, 'storage/products/') === 0) {
+//                                     // Prepend the base URL using asset() for local storage paths
+//                                     $image = asset('storage/' . ltrim($image, 'storage/'));  // Handle the path correctly
+//                                 } else {
+//                                     // Handle the case where the image is neither a URL nor in storage/
+//                                     // (e.g., if it's a relative path or file name)
+//                                     $image = asset('storage/products/' . $image);  // Prepend base URL for default product storage path
+//                                 }
+//                             }
+//                             return $image;  // Return the modified image URL
+//                         }, $images);
+//                     }
+
+//                     // Assign the processed images back to the product
+//                     $product->images = $images;
+//                 }
+
+//                 return $product;
+//             });
+
+//         // Attach the products to the order
+//         $order->setAttribute('products', $products);
+
+//         return $order;
+//     });
+
+//     // Return all orders with their product details as a JSON response
+//     return response()->json($orders);
+// }
+// public function index(Request $request)
+// {
+//     $query = Order::where('user_id', $request->user()->id);
+
+//     // If a search term is provided, add it to the query
+//     if ($request->has('search') && $request->search != '') {
+//         $search = $request->search;
+
+//         $query->where(function ($q) use ($search) {
+//             // Search by order ID or order code
+//             $q->where('id', 'like', '%' . $search . '%')
+//               ->orWhere('code', 'like', '%' . $search . '%') // Search by order code
+//               // Search by product name (joins ec_order_product and ec_products tables)
+//               ->orWhereExists(function ($query) use ($search) {
+//                   $query->select(DB::raw(1))
+//                         ->from('ec_order_product')
+//                         ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+//                         ->whereRaw('ec_order_product.order_id = ec_orders.id')
+//                         ->where('ec_products.name', 'like', '%' . $search . '%');
+//               });
+//         });
+//     }
+
+//     // Retrieve orders
+//     $orders = $query->orderBy('created_at', 'desc')->get();
+
+//     // If no orders are found, return a message with success false
+//     if ($orders->isEmpty()) {
+//         return response()->json([
+//             'success' => false,
+//             'message' => 'No orders found'
+//         ], 200);
+//     }
+
+//     // Transform each order to include its associated products
+//     $orders->transform(function ($order) {
+//         $products = DB::table('ec_order_product')
+//             ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+//             ->where('ec_order_product.order_id', $order->id)
+//             ->select(
+//                 'ec_products.id as product_id',
+//                 'ec_products.name',
+//                 'ec_products.sale_price',
+//                 'ec_products.delivery_days',
+//                 'ec_products.images',
+//                 'ec_order_product.price',
+//                 'ec_order_product.qty'
+//             )
+//             ->get()
+//             ->map(function ($product) {
+//                 // Decode the images field if it's JSON-encoded and process the URLs
+//                 if ($product->images) {
+//                     $images = json_decode($product->images, true);
+
+//                     if (is_array($images)) {
+//                         // Use array_map to process each image URL
+//                         $images = array_map(function ($image) {
+//                             // If the image URL already starts with http or https, don't modify it
+//                             if (!preg_match('/^https?:\/\//', $image)) {
+//                                 // Check if the path starts with 'storage/' or 'storage/products/'
+//                                 if (strpos($image, 'storage/') === 0 || strpos($image, 'storage/products/') === 0) {
+//                                     // Prepend the base URL using asset() for local storage paths
+//                                     $image = asset('storage/' . ltrim($image, 'storage/'));  // Handle the path correctly
+//                                 } else {
+//                                     // Handle the case where the image is neither a URL nor in storage/
+//                                     // (e.g., if it's a relative path or file name)
+//                                     $image = asset('storage/products/' . $image);  // Prepend base URL for default product storage path
+//                                 }
+//                             }
+//                             return $image;  // Return the modified image URL
+//                         }, $images);
+//                     }
+
+//                     // Assign the processed images back to the product
+//                     $product->images = $images;
+//                 }
+
+//                 return $product;
+//             });
+
+//         // Attach the products to the order
+//         $order->setAttribute('products', $products);
+
+//         return $order;
+//     });
+
+//     // Return all orders with their product details as a JSON response
+//     return response()->json([
+//         'success' => true,
+//         'data' => $orders
+//     ], 200);
+// }
 public function index(Request $request)
 {
-    // Retrieve the orders for the logged-in user, including related data
-    $orders = Order::where('user_id', $request->user()->id)->get();
+    $query = Order::where('user_id', $request->user()->id);
 
-    // If no orders are found, return a message
-    if ($orders->isEmpty()) {
-        return response()->json(['message' => 'No orders found'], 404);
+    // If a search term is provided, add it to the query
+    if ($request->has('search') && $request->search != '') {
+        $search = $request->search;
+
+        $query->where(function ($q) use ($search) {
+            // Search by order ID or order code
+            $q->where('id', 'like', '%' . $search . '%')
+              ->orWhere('code', 'like', '%' . $search . '%') // Search by order code
+              // Search by product name (joins ec_order_product and ec_products tables)
+              ->orWhereExists(function ($query) use ($search) {
+                  $query->select(DB::raw(1))
+                        ->from('ec_order_product')
+                        ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+                        ->whereRaw('ec_order_product.order_id = ec_orders.id')
+                        ->where('ec_products.name', 'like', '%' . $search . '%');
+              });
+        });
     }
 
-    // Iterate through each order and extract product details from the 'description' field
+    // Retrieve orders
+    $orders = $query->orderBy('created_at', 'desc')->get();
+
+    // If no orders are found, return a message with success false
+    if ($orders->isEmpty()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'No orders found'
+        ], 200);
+    }
+
+    // Transform each order to include its associated products and payment channel
     $orders->transform(function ($order) {
-        // Check if the 'description' field is not empty or null
-        if ($order->description) {
-            // Decode the 'description' field (which contains JSON data)
-            $productDetails = json_decode($order->description, true);
+        $products = DB::table('ec_order_product')
+            ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+            ->where('ec_order_product.order_id', $order->id)
+            ->select(
+                'ec_products.id as product_id',
+                'ec_products.name',
+                'ec_products.sale_price',
+                'ec_products.delivery_days',
+                'ec_products.images',
+                'ec_order_product.price',
+                'ec_order_product.qty'
+            )
+            ->get()
+            ->map(function ($product) {
+                // Decode the images field if it's JSON-encoded and process the URLs
+                if ($product->images) {
+                    $images = json_decode($product->images, true);
 
-            // Ensure the decoded JSON is an array
-            if (is_array($productDetails)) {
-                // Initialize an array to store the product details
-                $products = [];
-
-                // Loop through each product in the 'description' field and retrieve product data
-                foreach ($productDetails as $item) {
-                    // Fetch the product details from the 'ec_products' table based on the 'product_id'
-                    $product = Product::find($item['product_id']);
-
-                    // If the product exists, add the necessary details
-                    if ($product) {
-                        $products[] = [
-                            'product_id' => $product->id,
-                            'name' => $product->name,
-                            'price' => $item['price'],
-                             'sale_price' => $product->sale_price,
-                            'quantity' => $item['quantity'],
-                            'description' => $product->description,  // Include other details as needed
-                            'images' => $product-> images
-                        ];
+                    if (is_array($images)) {
+                        // Use array_map to process each image URL
+                        $images = array_map(function ($image) {
+                            // If the image URL already starts with http or https, don't modify it
+                            if (!preg_match('/^https?:\/\//', $image)) {
+                                // Check if the path starts with 'storage/' or 'storage/products/'
+                                if (strpos($image, 'storage/') === 0 || strpos($image, 'storage/products/') === 0) {
+                                    // Prepend the base URL using asset() for local storage paths
+                                    $image = asset('storage/' . ltrim($image, 'storage/'));  // Handle the path correctly
+                                } else {
+                                    // Handle the case where the image is neither a URL nor in storage/
+                                    // (e.g., if it's a relative path or file name)
+                                    $image = asset('storage/products/' . $image);  // Prepend base URL for default product storage path
+                                }
+                            }
+                            return $image;  // Return the modified image URL
+                        }, $images);
                     }
+
+                    // Assign the processed images back to the product
+                    $product->images = $images;
                 }
 
-                // Attach the product details to the order as a custom attribute
-                $order->setAttribute('products', $products);
-            } else {
-                // If the description is not a valid array, set products to an empty array
-                $order->setAttribute('products', []);
-            }
-        } else {
-            // If description is null or empty, set products to an empty array
-            $order->setAttribute('products', []);
-        }
+                return $product;
+            });
 
-        // Return the updated order with the product details
+        // Retrieve the payment channel for the order
+        $paymentChannel = DB::table('payments')
+            ->where('order_id', $order->id)
+            ->value('payment_channel'); // Get the single column value
+
+        // Attach the products and payment channel to the order
+        $order->setAttribute('products', $products);
+        $order->setAttribute('payment_channel', $paymentChannel);
+
         return $order;
     });
 
-    // Return the orders with the product details as a JSON response
+    // Return all orders with their product details and payment channel as a JSON response
+    return response()->json([
+        'success' => true,
+        'data' => $orders
+    ], 200);
+}
+
+
+
+public function reorder(Request $request)
+{
+    // Retrieve the last 5 completed orders for the authenticated user
+    $orders = Order::where('user_id', $request->user()->id)
+        ->where('status', 'completed') // Filter only completed orders
+        ->orderBy('created_at', 'desc')
+        ->take(5) // Limit to the last 5 orders
+        ->get();
+
+    // If no completed orders are found, return a message
+    if ($orders->isEmpty()) {
+        return response()->json(['message' => 'No completed orders found'], 404);
+    }
+
+    // Transform each order to include its associated products
+    $orders->transform(function ($order) {
+        // Fetch the products associated with the order via the `ec_order_product` table
+        $products = DB::table('ec_order_product')
+            ->join('ec_products', 'ec_order_product.product_id', '=', 'ec_products.id')
+            ->where('ec_order_product.order_id', $order->id)
+            ->select(
+                'ec_products.id as product_id',
+                'ec_products.name',
+                'ec_products.sale_price',
+                'ec_products.delivery_days',
+                'ec_products.images',
+                'ec_order_product.price',
+                'ec_order_product.qty'
+            )
+            ->get()
+            ->map(function ($product) {
+                // Decode and process images field if JSON-encoded
+                if ($product->images) {
+                    $images = json_decode($product->images, true);
+
+                    if (is_array($images)) {
+                        $images = array_map(function ($image) {
+                            // Prepend the base URL if the image isn't an absolute URL
+                            if (!preg_match('/^https?:\/\//', $image)) {
+                                $image = asset('storage/products/' . ltrim($image, '/'));
+                            }
+                            return $image;
+                        }, $images);
+                    }
+
+                    $product->images = $images;
+                }
+
+                return $product;
+            });
+
+        // Attach the products to the order
+        $order->setAttribute('products', $products);
+
+        return $order;
+    });
+
+    // Return the last 5 completed orders with their product details
     return response()->json($orders);
 }
+
+public function reorderToCart(Request $request, $orderId)
+{
+    // Validate that the order exists and belongs to the authenticated user
+    $order = Order::where('id', $orderId)
+        ->where('user_id', $request->user()->id)
+        ->where('status', 'completed') // Ensure it's a completed order
+        ->first();
+
+    if (!$order) {
+        return response()->json(['success' => false, 'message' => 'Order not found or not completed'], 404);
+    }
+
+    // Fetch the products associated with the order
+    $orderProducts = DB::table('ec_order_product')
+        ->where('order_id', $order->id)
+        ->get();
+
+    if ($orderProducts->isEmpty()) {
+        return response()->json(['success' => false, 'message' => 'No products found in this order'], 404);
+    }
+
+    // Add each product from the order to the cart
+    foreach ($orderProducts as $orderProduct) {
+        $cartItem = Cart::where('user_id', $request->user()->id)
+            ->where('product_id', $orderProduct->product_id)
+            ->first();
+
+        if ($cartItem) {
+            // If the product is already in the cart, increase the quantity
+            $cartItem->quantity += $orderProduct->qty;
+            $cartItem->save();
+        } else {
+            // Add a new item to the cart
+            Cart::create([
+                'user_id' => $request->user()->id,
+                'product_id' => $orderProduct->product_id,
+                'quantity' => $orderProduct->qty,
+            ]);
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Order items have been added to the cart',
+    ]);
+}
+public function byitagain(Request $request) 
+{
+    // Retrieve the last 5 completed orders for the authenticated user
+    $orderIds = Order::where('user_id', $request->user()->id)
+        ->where('status', 'completed') // Filter only completed orders
+        ->orderBy('created_at', 'desc')
+        ->take(5) // Limit to the last 5 orders
+        ->pluck('id'); // Get only order IDs
+
+    // If no completed orders are found, return a message
+    if ($orderIds->isEmpty()) {
+        return response()->json(['message' => 'No completed orders found'], 404);
+    }
+
+    // Fetch product IDs from order-product relationship table
+    $productIds = DB::table('ec_order_product')
+        ->whereIn('order_id', $orderIds)
+        ->pluck('product_id')
+        ->unique(); // Get unique product IDs
+
+    // Build the query to fetch products
+    $productsQuery = DB::table('ec_products')
+        ->whereIn('id', $productIds);
+
+    // Filter products by rating if the rating parameter is provided
+    if ($request->has('rating')) {
+        $productsQuery->whereHas('reviews', function ($q) use ($request) {
+            $q->selectRaw('AVG(star) as avg_rating')
+                ->groupBy('product_id')
+                ->havingRaw('AVG(star) >= ?', [$request->input('rating')]);
+        });
+    }
+
+    // Fetch complete product details from ec_products
+    $products = $productsQuery->get()
+        ->map(function ($product) {
+            // Decode and process images field if JSON-encoded
+            if ($product->images) {
+                $images = json_decode($product->images, true);
+
+                if (is_array($images)) {
+                    $images = array_map(function ($image) {
+                        // Prepend the base URL if the image isn't an absolute URL
+                        if (!preg_match('/^https?:\/\//', $image)) {
+                            $image = asset('storage/products/' . ltrim($image, '/'));
+                        }
+                        return $image;
+                    }, $images);
+                }
+
+                $product->images = $images;
+            }
+
+
+            // Fetch currency details based on currency_id
+            $currency = DB::table('ec_currencies')->where('id', $product->currency_id)->first();
+            $product->currency_title = $currency
+                ? ($currency->is_prefix_symbol
+                    ? $currency->title . ' ' . $product->price
+                    : $product->price . ' ' . $currency->title)
+                : $product->price;
+
+            // Fetch average rating and total reviews
+            $totalReviews = DB::table('ec_reviews')->where('product_id', $product->id)->count();
+            $product->avg_rating = $totalReviews > 0
+                ? DB::table('ec_reviews')->where('product_id', $product->id)->avg('star')
+                : null;
+
+            // Append additional fields to the response
+            $product->original_price = $product->price;
+            $product->front_sale_price = $product->price;
+            $product->stock_quantity = $product->quantity;
+     
+
+            return $product;
+        });
+
+    // Return the product details inside 'data'
+    return response()->json(['data' => $products]);
+}
+
+
+
+
+
 // public function getLatestOrder(Request $request)
 // {
 //     // Retrieve the latest order for the logged-in user
