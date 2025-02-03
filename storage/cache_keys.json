@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
     "Botble\\Base\\Supports\\DashboardMenu": [
         "03eefa39b82d941c0f50db437493c565@dashboard_menu:admin:Botble\\ACL\\Models\\User:1:en",
@@ -342,3 +343,6 @@
         "876a095a247b966461c4079f23f9e7ae@menu_location_d82ad44a47fad4694207778b2dc5f2cd"
     ]
 }
+=======
+[]
+>>>>>>> 497da34b (Save changes before merge)
