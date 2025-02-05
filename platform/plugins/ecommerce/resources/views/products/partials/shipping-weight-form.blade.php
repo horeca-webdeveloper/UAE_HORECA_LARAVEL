@@ -9,6 +9,6 @@
         <option value="Kg" {{ (old('shipping_weight_option', $shipping_weight_option) == 'Kg') ? 'selected' : '' }}>Kg</option>
         <option value="g" {{ (old('shipping_weight_option', $shipping_weight_option) == 'g') ? 'selected' : '' }}>Grams</option>
         <option value="lbs" {{ (old('shipping_weight_option', $shipping_weight_option) == 'lbs') ? 'selected' : '' }}>LBS</option>
-        {{-- <option value="oz" {{ (old('shipping_weight_option', $shipping_weight_option) == 'oz') ? 'selected' : '' }}>Ounces</option> --}}
+        {{--- <option value="oz" {{ (old('shipping_weight_option', $shipping_weight_option) == 'oz') ? 'selected' : '' }}>Ounces</option> --}}
     </select>
 </div>
