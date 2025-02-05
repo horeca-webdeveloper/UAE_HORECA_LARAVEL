@@ -1,5 +1,5 @@
-# Use official PHP 8.3 image as base
-FROM php:8.3-fpm
+# Use official PHP 8.3 image with Apache as base
+FROM php:8.3-apache
 
 # Set working directory inside the container
 WORKDIR /var/www/html
@@ -19,6 +19,9 @@ RUN apt-get update && apt-get install -y \
     docker-php-ext-enable xdebug && \
     apt-get clean
 
+# Enable Apache rewrite module
+RUN a2enmod rewrite headers expires
+
 # Install Composer (PHP Dependency Manager)
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
@@ -36,11 +39,23 @@ RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 # Install Composer dependencies
 RUN composer install --no-interaction --optimize-autoloader
 
-# Set environment variable for Laravel's APP_KEY
-#RUN php artisan key:generate
+# Set Apache DocumentRoot to Laravel's public directory
+RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
 
-# Expose the necessary port
-EXPOSE 8000
+# Enable caching for static files
+RUN echo '<IfModule mod_expires.c>\n\
+    ExpiresActive On\n\
+    ExpiresByType text/css "access plus 1 month"\n\
+    ExpiresByType text/javascript "access plus 1 month"\n\
+    ExpiresByType application/javascript "access plus 1 month"\n\
+    ExpiresByType image/png "access plus 1 year"\n\
+    ExpiresByType image/jpeg "access plus 1 year"\n\
+    ExpiresByType image/gif "access plus 1 year"\n\
+</IfModule>' > /etc/apache2/conf-available/expires.conf && \
+    a2enconf expires
 
-# Start PHP-FPM server (for Laravel)
-# ENTRYPOINT ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Restart Apache to apply changes
+RUN service apache2 restart
+
+# Expose Apache port
+EXPOSE 80
