@@ -15,7 +15,7 @@ class CategoryController extends Controller
 {
 	public function index(Request $request)
 	{
-		$filterId = $request->get('id'); // Optional ID filter sdad asd
+		$filterId = $request->get('id'); // Optional ID filter sdad asd s
 		$limit = $request->get('limit', 12); // Default limit to 12
 
 		if ($filterId) {
