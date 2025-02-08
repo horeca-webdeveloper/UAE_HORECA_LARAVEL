@@ -28,7 +28,7 @@ use Botble\Ecommerce\Traits\ProductActionsTrait;
 use Botble\Ecommerce\Models\Review;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // Add this line
+use Illuminate\Support\Facades\DB; // Add this line hjhy
 class ProductApiController extends Controller
 {
 
