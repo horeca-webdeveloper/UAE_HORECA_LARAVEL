@@ -773,43 +773,44 @@ public function index(Request $request)
         return $order;
     });
 
-            // Return paginated orders with metadata
-        //   return response()->json([
-        //         'success' => true,
-        //         'data' => $orders->items(), // Orders data
-        //         'pagination' => [
-        //         'current_page' => $orders->currentPage(),
-        //         'last_page' => $orders->lastPage(),
-        //         'per_page' => $orders->perPage(),
-        //         'total' => $orders->total(),
-        //         'links' => [[
-        //         'first' => $orders->url(1),
-        //         'last' => $orders->url($orders->lastPage()),
-        //         'prev' => $orders->previousPageUrl(),
-        //         'next' => $orders->nextPageUrl(),
-        //         ]]
-        //          ]
-        //      ], 200);
+    // Generate pagination links in the required format
+    $links = [];
 
-        return response()->json([
-            'success' => true,
-            'data' => $orders->items(), // Orders data
-            'pagination' => [
-                'current_page' => $orders->currentPage(),
-                'last_page' => $orders->lastPage(),
-                'per_page' => $orders->perPage(),
-                'total' => $orders->total(),
-                'links' => collect($orders->links())->map(function ($link) {
-                    return [
-                        'url' => $link['url'],
-                        'label' => strip_tags($link['label']), // Remove HTML tags like "<a>" or symbols
-                        'active' => $link['active'],
-                    ];
-                })->toArray(),
-            ]
-        ], 200);
-        
-        
+    // Previous Page Link
+    $links[] = [
+        'url' => $orders->previousPageUrl(),
+        'label' => '&laquo; Previous',
+        'active' => false
+    ];
+
+    // Page Number Links
+    for ($i = 1; $i <= $orders->lastPage(); $i++) {
+        $links[] = [
+            'url' => $orders->url($i),
+            'label' => (string) $i,
+            'active' => $i === $orders->currentPage()
+        ];
+    }
+
+    // Next Page Link
+    $links[] = [
+        'url' => $orders->nextPageUrl(),
+        'label' => 'Next &raquo;',
+        'active' => false
+    ];
+
+    // Return the JSON response
+    return response()->json([
+        'success' => true,
+        'data' => $orders->items(), // Orders data
+        'pagination' => [
+            'current_page' => $orders->currentPage(),
+            'last_page' => $orders->lastPage(),
+            'per_page' => $orders->perPage(),
+            'total' => $orders->total(),
+            'links' => $links
+        ]
+    ], 200);
 }
 
 // public function index(Request $request)
