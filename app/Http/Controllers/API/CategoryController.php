@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
-
+use Botble\Ecommerce\Models\Brand;
 use Botble\Ecommerce\Models\Product;
 use Botble\Ecommerce\Models\ProductCategory;
 use Botble\Ecommerce\Models\Specification;
@@ -15,7 +15,7 @@ class CategoryController extends Controller
 {
 	public function index(Request $request)
 	{
-		$filterId = $request->get('id'); // Optional ID filter sdad asd s
+		$filterId = $request->get('id'); // Optional ID filter
 		$limit = $request->get('limit', 12); // Default limit to 12
 
 		if ($filterId) {
@@ -465,7 +465,7 @@ class CategoryController extends Controller
 			], 400);
 		}
 
-		// Get sort parameter
+		// Get sort parameter sdsd
 		$sortBy = $request->input('sort_by', 'created_at');
 		if (!in_array($sortBy, ['created_at', 'price', 'name'])) {
 			$sortBy = 'created_at';
@@ -580,10 +580,13 @@ class CategoryController extends Controller
 			$filters = [];
 		}
 
+		$brands = Brand::select('id', 'name')->get();
+
 		return response()->json([
 			'success' => true,
 			'filters' => $filters,
 			'products' => $categoryProducts,
+			'brands' => $brands,
 		], 200);
 	}
 
@@ -724,6 +727,6 @@ class CategoryController extends Controller
 	// 		'success' => true,
 	// 		'filters' => $filters,
 	// 		'products' => $categoryProducts,
-	// 	], 200);
+	// 	], 200); dsdasd sd
 	// }
 }

@@ -89,51 +89,50 @@ class LocationController extends Controller
   // HERE API incoming parameters
 
 
-  public function getAddress(Request $request)
-  {
-      // Validate incoming latitude and longitude
-      $request->validate([
-          'lat' => 'required|numeric',
-          'lon' => 'required|numeric',
-      ]);
-  
-      // Get latitude and longitude from the request
-      $latitude = $request->input('lat');
-      $longitude = $request->input('lon');
-  
-      // Get your HERE API key from .env
-      $apiKey = env('HERE_API_KEY');
-  
-      // Send request to HERE API's reverse geocoding endpoint
-      $response = Http::get("https://geocode.search.hereapi.com/v1/reverse", [
-          'apiKey' => $apiKey,
-          'at' => "$latitude,$longitude", // Latitude and longitude as a string
-          'lang' => 'en', // Optional: specify language for the result
-      ]);
-  
-      // Check if the response was successful
-      if ($response->successful()) {
-          $data = $response->json();
-  
-          // Check if the response contains address information
-          if (isset($data['items']) && count($data['items']) > 0) {
-              return response()->json([
-                  'status' => 'success',
-                  'address' => $data['items'][0]['address'],
-              ]);
-          } else {
-              return response()->json([
-                  'status' => 'error',
-                  'message' => 'Address not found',
-              ]);
-          }
-      } else {
-          return response()->json([
-              'status' => 'error',
-              'message' => 'Failed to fetch data from HERE API',
-          ]);
-      }
-  }
-  
+    public function getAddress(Request $request)
+    {
+        // Validate incoming latitude and longitude
+        $request->validate([
+            'lat' => 'required|numeric',
+            'lon' => 'required|numeric',
+        ]);
+
+        // Get latitude and longitude from the request
+        $latitude = $request->input('lat');
+        $longitude = $request->input('lon');
+
+        // Get your HERE API key from .env
+        $apiKey = env('HERE_API_KEY');
+
+        // Send request to HERE API's reverse geocoding endpoint
+        $response = Http::get("https://geocode.search.hereapi.com/v1/reverse", [
+            'apiKey' => $apiKey,
+            'at' => "$latitude,$longitude", // Latitude and longitude as a string
+            'lang' => 'en', // Optional: specify language for the result
+        ]);
+
+        // Check if the response was successful
+        if ($response->successful()) {
+            $data = $response->json();
+
+            // Check if the response contains address information
+            if (isset($data['items']) && count($data['items']) > 0) {
+                return response()->json([
+                    'status' => 'success',
+                    'address' => $data['items'][0]['address'],
+                ]);
+            } else {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Address not found',
+                ]);
+            }
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to fetch data from HERE API',
+            ]);
+        }
+    }
     
 }
