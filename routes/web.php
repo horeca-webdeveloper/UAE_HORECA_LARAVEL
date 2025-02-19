@@ -24,6 +24,7 @@ use Botble\Ecommerce\Http\Controllers\ImportProductDescriptionController;
 use Botble\Ecommerce\Http\Controllers\EliteShipmentController;
 use Botble\Ecommerce\Http\Controllers\ProductDocumentController;
 use Botble\Ecommerce\Http\Controllers\ProductApprovalController;
+use Botble\Ecommerce\Http\Controllers\ProductSpecificationController;
 use App\Http\Controllers\API\SquarePaymentController;
 
 
@@ -47,8 +48,16 @@ use App\Http\Controllers\API\SquarePaymentController;
 	Route::post('ecommerce/temp-products-status/approve', [TempProductStatusController::class, 'approveChanges'])->name('temp-products.approve');
 
 	Route::get('admin/ecommerce/category-product-filter', [CategoryProductTypeController::class, 'index'])->name('categoryFilter.index');
+	Route::get('admin/ecommerce/test-aws', [CategoryProductTypeController::class, 'test_aws'])->name('categoryFilter.test_aws');
 	Route::get('admin/ecommerce/category-product-filter/{id}/edit', [CategoryProductTypeController::class, 'edit'])->name('categoryFilter.edit');
 	Route::put('admin/ecommerce/category-product-filter/{id}', [CategoryProductTypeController::class, 'update'])->name('categoryFilter.update');
+	Route::get('admin/ecommerce/copy-products-to-s3', [CategoryProductTypeController::class, 'copyProductsToS3']);
+
+
+	Route::get('admin/ecommerce/export-product-attribute', [ProductSpecificationController::class, 'index'])->name('productSpecifications.import');
+	Route::post('admin/ecommerce/export-product-attribute', [ProductSpecificationController::class, 'store'])->name('productSpecifications.importPost');
+
+
 // });
 
 	// Define route for showing the upload form
@@ -106,4 +115,3 @@ use App\Http\Controllers\API\SquarePaymentController;
 
 	// Define the route to handle form submission
 	Route::post('admin/ecommerce/store-shipment', [EliteShipmentController::class, 'store'])->name('eliteshipment.store');
-
