@@ -767,7 +767,8 @@ class CategoryController extends Controller
 			'price_min' => 'nullable|numeric|min:0',
 			'price_max' => 'nullable|numeric|min:0',
 			'price_order' => 'nullable|in:high_to_low,low_to_high',
-			'brand_id' => 'nullable|integer',
+			'brand_id' => 'nullable|array', // Update this line
+			'brand_id.*' => 'integer', // Validate all brand_id elements as integers
 			'rating' => 'nullable|numeric|min:1|max:5',
 		]);
 	
@@ -870,7 +871,7 @@ class CategoryController extends Controller
 	
 		// Apply brand filter
 		if ($request->has('brand_id') && $request->brand_id) {
-			$categoryProducts->where('brand_id', $request->brand_id);
+			$categoryProducts->whereIn('brand_id', $request->brand_id); // Updated to handle array
 		}
 	
 		// Apply sorting
@@ -985,7 +986,6 @@ class CategoryController extends Controller
 			'rating_filter' => $ratingFilter,
 		], 200);
 	}
-
 
 	// public function getSpecificationFilters(Request $request)
 	// {
