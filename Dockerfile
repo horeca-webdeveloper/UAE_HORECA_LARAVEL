@@ -1,61 +1,96 @@
-# Use official PHP 8.3 image with Apache as base
-FROM php:8.3-apache
+FROM php:8.2-fpm
 
-# Set working directory inside the container
-WORKDIR /var/www/html
-
-# Install system dependencies and PHP extensions
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
+    build-essential \
     libpng-dev \
-    libjpeg62-turbo-dev \
+    libjpeg-dev \
     libfreetype6-dev \
     libzip-dev \
-    libxml2-dev \
-    git \
-    unzip && \
-    docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-install gd zip pdo pdo_mysql xml calendar && \
-    pecl install xdebug && \
-    docker-php-ext-enable xdebug && \
-    apt-get clean
+    apache2 \
+    libapache2-mod-fcgid \
+    unzip \
+    && docker-php-ext-install pdo pdo_mysql zip calendar \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite headers expires
+# Enable Apache modules and configs
+RUN a2enmod rewrite headers proxy_fcgi setenvif
+RUN a2enconf serve-cgi-bin
 
-# Install Composer (PHP Dependency Manager)
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+# Configure PHP
+COPY php.ini /usr/local/etc/php/conf.d/app.ini
 
-# Fix permissions to avoid git ownership issues
-RUN chown -R www-data:www-data /var/www/html
-RUN git config --global --add safe.directory /var/www/html  # Add safe directory for git
+# Configure PHP-FPM
+RUN mkdir -p /var/run/php-fpm && \
+    mkdir -p /var/log/php-fpm && \
+    touch /var/log/php-fpm/error.log
 
-# Copy the existing application to the container
-COPY . /var/www/html
+# Configure Apache
+COPY apache-default.conf /etc/apache2/sites-available/000-default.conf
+RUN echo "ServerName localhost" >> /etc/apache2/apache2.conf
 
-# Set appropriate permissions for the copied files
-RUN chown -R www-data:www-data /var/www/html
-RUN chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+# Set the working directory
+WORKDIR /var/www
 
-# Install Composer dependencies
-RUN composer install --no-interaction --optimize-autoloader
+# Install composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Set Apache DocumentRoot to Laravel's public directory
-RUN sed -i 's|/var/www/html|/var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
+# Copy the application files
+COPY . /var/www/
 
-# Enable caching for static files
-RUN echo '<IfModule mod_expires.c>\n\
-    ExpiresActive On\n\
-    ExpiresByType text/css "access plus 1 month"\n\
-    ExpiresByType text/javascript "access plus 1 month"\n\
-    ExpiresByType application/javascript "access plus 1 month"\n\
-    ExpiresByType image/png "access plus 1 year"\n\
-    ExpiresByType image/jpeg "access plus 1 year"\n\
-    ExpiresByType image/gif "access plus 1 year"\n\
-</IfModule>' > /etc/apache2/conf-available/expires.conf && \
-    a2enconf expires
+# Copy .env file
+COPY .env /var/www/.env
 
-# Restart Apache to apply changes
-RUN service apache2 restart
+# Create all necessary directories with proper permissions
+RUN mkdir -p /var/www/storage/framework/cache && \
+    mkdir -p /var/www/storage/framework/sessions && \
+    mkdir -p /var/www/storage/framework/views && \
+    mkdir -p /var/www/storage/logs && \
+    mkdir -p /var/www/storage/app/public && \
+    mkdir -p /var/www/bootstrap/cache && \
+    mkdir -p /var/www/public/storage && \
+    chown -R www-data:www-data /var/www && \
+    chmod -R 775 /var/www/storage && \
+    chmod -R 775 /var/www/bootstrap/cache && \
+    chmod -R 775 /var/www/public
 
-# Expose Apache port
+# Install dependencies
+RUN composer install --no-dev --optimize-autoloader
+
+# Create startup script with storage link and permissions
+RUN echo '#!/bin/bash\n\
+\n\
+# Remove existing storage link and create new one\n\
+rm -f /var/www/public/storage\n\
+php artisan storage:link\n\
+\n\
+# Clear all caches\n\
+php artisan cache:clear\n\
+php artisan config:clear\n\
+php artisan view:clear\n\
+php artisan route:clear\n\
+\n\
+# Run migrations\n\
+php artisan migrate --force\n\
+\n\
+# Reset permissions\n\
+chown -R www-data:www-data /var/www/storage\n\
+chown -R www-data:www-data /var/www/bootstrap/cache\n\
+chown -R www-data:www-data /var/www/public/storage\n\
+chmod -R 775 /var/www/storage\n\
+chmod -R 775 /var/www/bootstrap/cache\n\
+chmod -R 775 /var/www/public/storage\n\
+\n\
+# Start services\n\
+php-fpm -D\n\
+/usr/sbin/apache2ctl -D FOREGROUND' > /usr/local/bin/start-apache-php-fpm && \
+    chmod +x /usr/local/bin/start-apache-php-fpm
+
+# Expose port 80
 EXPOSE 80
+
+# Start Apache and PHP-FPM
+CMD ["/usr/local/bin/start-apache-php-fpm"]
