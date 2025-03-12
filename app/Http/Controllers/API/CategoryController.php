@@ -28,7 +28,7 @@ class CategoryController extends Controller
 			$categories = ProductCategory::all();
 		}
 
-		// Transform categories into a parent-child structure
+		// Tnsform categories into a parent-child structure
 		$categoriesTree = $this->buildTree($categories, $filterId, $limit);
 
 		// Add full URLs for images (both parent and child categories)
