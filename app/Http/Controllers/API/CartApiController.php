@@ -283,6 +283,72 @@ public function addToCart(Request $request)
 //         'data' => $cartItems,
 //     ]);
 // }
+// public function viewCart(Request $request) old one
+// {
+//     $userId = Auth::id();
+//     $isUserLoggedIn = $userId !== null;
+
+//     Log::info('User logged in:', ['user_id' => $userId]);
+
+//     // Get wishlist product IDs
+//     $wishlistProductIds = $isUserLoggedIn
+//         ? DB::table('ec_wish_lists')
+//             ->where('customer_id', $userId)
+//             ->pluck('product_id')
+//             ->map(function ($id) {
+//                 return (int) $id;
+//             })
+//             ->toArray()
+//         : session()->get('guest_wishlist', []);
+
+//     // Fetch cart items with product and currency details
+//     $cartItems = Auth::check()
+//         ? Cart::where('user_id', $userId)->with('product.currency')->get()
+//         : Cart::where('session_id', $request->session()->getId())->with('product.currency')->get();
+
+//     // Add 'is_wishlist' flag and generate full URLs for product images
+//     $cartItems->each(function ($item) use ($wishlistProductIds) {
+//         $item->product->in_wishlist = in_array($item->product->id, $wishlistProductIds);
+
+//         // Base URLs for generating image links
+//         $baseStorageUrl = url('storage/');
+//         $baseProductsUrl = url('storage/products/');
+
+//         // Generate full URLs for product images
+//         $item->product->images = collect($item->product->images ?? [])->map(function ($image) use ($baseStorageUrl, $baseProductsUrl) {
+//             // If the image URL starts with http/https, return as-is
+//             if (Str::startsWith($image, ['http://', 'https://'])) {
+//                 return $image;
+//             }
+            
+//             // Check if the image exists in 'products' directory, else use the general 'storage' directory
+//             $url = Storage::exists('products/' . $image) ? $baseProductsUrl : $baseStorageUrl;
+//             return $url . '/' . $image;
+//         });
+
+//         // Add full URL for the main product image
+//         if ($item->product->image) {
+//             if (Str::startsWith($item->product->image, ['http://', 'https://'])) {
+//                 $item->product->image = $item->product->image;
+//             } else {
+//                 $imagePath = 'products/' . $item->product->image;
+//                 $url = Storage::exists($imagePath) ? $baseProductsUrl : $baseStorageUrl;
+//                 $item->product->image = $url . '/' . $item->product->image;
+//             }
+//         } else {
+//             $item->product->image = null;
+//         }
+//     });
+
+//     $currencyTitles = $cartItems->pluck('product.currency.title')->unique()->filter()->values();
+
+//     return response()->json([
+//         'success' => true,
+//         'currency_title' => $currencyTitles,
+//         'data' => $cartItems,
+//     ]);
+// }
+
 public function viewCart(Request $request)
 {
     $userId = Auth::id();
@@ -295,9 +361,7 @@ public function viewCart(Request $request)
         ? DB::table('ec_wish_lists')
             ->where('customer_id', $userId)
             ->pluck('product_id')
-            ->map(function ($id) {
-                return (int) $id;
-            })
+            ->map(fn($id) => (int) $id)
             ->toArray()
         : session()->get('guest_wishlist', []);
 
@@ -306,8 +370,28 @@ public function viewCart(Request $request)
         ? Cart::where('user_id', $userId)->with('product.currency')->get()
         : Cart::where('session_id', $request->session()->getId())->with('product.currency')->get();
 
-    // Add 'is_wishlist' flag and generate full URLs for product images
-    $cartItems->each(function ($item) use ($wishlistProductIds) {
+    // Fetch applicable discounts for the user
+    $userDiscountIds = DB::table('ec_discount_customers')
+        ->where('customer_id', $userId)
+        ->pluck('discount_id')
+        ->toArray();
+
+    // Fetch applicable product discounts (allow multiple discounts per product)
+    $productDiscounts = DB::table('ec_discount_products')
+        ->whereIn('product_id', $cartItems->pluck('product.id'))
+        ->select('product_id', 'discount_id')
+        ->get()
+        ->groupBy('product_id')
+        ->map(fn($discounts) => $discounts->pluck('discount_id')->toArray());
+
+    // Get all discounts from the discount table
+    $discounts = DB::table('ec_discounts')
+        ->whereIn('id', array_merge($userDiscountIds, $productDiscounts->flatten()->toArray()))
+        ->get()
+        ->keyBy('id');
+
+    // Process each cart item
+    $cartItems->each(function ($item) use ($wishlistProductIds, $productDiscounts, $discounts) {
         $item->product->in_wishlist = in_array($item->product->id, $wishlistProductIds);
 
         // Base URLs for generating image links
@@ -316,21 +400,16 @@ public function viewCart(Request $request)
 
         // Generate full URLs for product images
         $item->product->images = collect($item->product->images ?? [])->map(function ($image) use ($baseStorageUrl, $baseProductsUrl) {
-            // If the image URL starts with http/https, return as-is
             if (Str::startsWith($image, ['http://', 'https://'])) {
                 return $image;
             }
-            
-            // Check if the image exists in 'products' directory, else use the general 'storage' directory
             $url = Storage::exists('products/' . $image) ? $baseProductsUrl : $baseStorageUrl;
             return $url . '/' . $image;
         });
 
         // Add full URL for the main product image
         if ($item->product->image) {
-            if (Str::startsWith($item->product->image, ['http://', 'https://'])) {
-                $item->product->image = $item->product->image;
-            } else {
+            if (!Str::startsWith($item->product->image, ['http://', 'https://'])) {
                 $imagePath = 'products/' . $item->product->image;
                 $url = Storage::exists($imagePath) ? $baseProductsUrl : $baseStorageUrl;
                 $item->product->image = $url . '/' . $item->product->image;
@@ -338,6 +417,10 @@ public function viewCart(Request $request)
         } else {
             $item->product->image = null;
         }
+
+        // Attach all applicable discounts
+        $discountIds = $productDiscounts[$item->product->id] ?? [];
+        $item->product->discounts = collect($discountIds)->map(fn($id) => $discounts[$id] ?? null)->filter()->values();
     });
 
     $currencyTitles = $cartItems->pluck('product.currency.title')->unique()->filter()->values();
@@ -348,6 +431,7 @@ public function viewCart(Request $request)
         'data' => $cartItems,
     ]);
 }
+
 
 
 
