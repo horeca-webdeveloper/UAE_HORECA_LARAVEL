@@ -35,7 +35,10 @@ class ImportProductJob implements ShouldQueue
 {
 	use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 	public $timeout = 43200;
+<<<<<<< HEAD
 
+=======
+>>>>>>> beb9eb16 (updated jobs)
 	protected $header;
 	protected $chunk;
 	protected $userId;
