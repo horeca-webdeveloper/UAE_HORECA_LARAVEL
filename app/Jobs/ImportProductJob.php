@@ -1222,7 +1222,7 @@ class ImportProductJob implements ShouldQueue
 	// 		unlink($tempResizedPath);
 	// 	}
 
-	// 	// Return the public URL of the uploaded image
+	// 	// Rturn the public URL of the uploaded image
 	// 	return Storage::disk('s3')->url($s3FilePath);
 	// }
 
