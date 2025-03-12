@@ -2,16 +2,16 @@
 
 namespace App\Jobs;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Bus\Batchable;
 
 use Botble\Ecommerce\Models\Product;
+use App\Models\TransactionLog;
 
-use Aws\S3\S3Client;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -19,54 +19,92 @@ use Botble\Media\Facades\RvMedia;
 
 class ProductCopyToS3Job implements ShouldQueue
 {
-	use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+	use Dispatchable, InteractsWithQueue, Queueable, SerializesModels, Batchable;
 	public $timeout = 43200;
+
+	protected $offset;
+	protected $limit;
+	protected $storageEnv;
+
+	public function __construct($offset, $limit, $storageEnv)
+	{
+		$this->offset = $offset;
+		$this->limit = $limit;
+		$this->storageEnv = $storageEnv;
+	}
 
 	public function handle()
 	{
-		$s3Client = new S3Client([
-			'region'  => env('AWS_DEFAULT_REGION'),
-			'version' => 'latest',
-			'credentials' => [
-				'key'    => env('AWS_ACCESS_KEY_ID'),
-				'secret' => env('AWS_SECRET_ACCESS_KEY'),
-			],
-		]);
+		$success = 0;
+		$failed = 0;
+		$errorArray = [];
 
-		try {
-			$s3Client->listBuckets();
-			Log::info("Bucket connected successfully.");
-		} catch (\Aws\Exception\AwsException $e) {
-			Log::error("Bucket Connection Error: " . $e->getMessage());
+		$products = Product::query()
+		->whereNotNull('images')
+		->where('images', 'like', '["http%')
+		->where('images', 'not like', '["https:\\\\/\\\\/horecastore-s3-storage%')
+		->select(['id', 'images', 'image'])
+		->orderBy('id', 'asc')
+		->limit($this->limit)
+		->get();
+
+		Log::info($products->count()." Product for offset $this->offset and limit $this->limit");
+
+		/* Stop execution if no products found */
+		if ($products->isEmpty()) {
+			Log::info("No unprocessed products found. Job will terminate.");
 			return;
 		}
 
-		$products = Product::query()->whereNotNull('images')->select(['id', 'images', 'image'])->get();
-		Log::info("Total product count: " . $products->count());
-
-		$i = 0;
 		foreach ($products as $product) {
-			$i++;
-			if ($i % 50 == 0) {
-				Log::info("$i records processed.");
-			}
-
 			$fetchedImages = $this->getImageURLs((array) $product->images ?? []);
 
 			if (count($fetchedImages) > 0) {
 				$product->update([
 					'images' => json_encode($fetchedImages),
-					'image'  => $fetchedImages[0],
+					'image' => $fetchedImages[0],
 				]);
+				$success++;
 			} else {
-				$product->update([
-					'images' => json_encode([]),
-					'image'  => null,
-				]);
+				$convertErr[] = "Failed to process images.";
+				$errorArray[] = [
+					"Product ID" => $product->id,
+					"Error" => implode(' | ', $convertErr),
+				];
+				$failed++;
+			}
+
+			/* Update logs every 50 processed records and reset counters */
+			if (($success + $failed) % 50 == 0) {
+				$this->updateTransactionLog($success, $failed, $errorArray);
+				$success = 0;
+				$failed = 0;
+				$errorArray = [];
 			}
 		}
 
-		Log::info("Product images copied to S3 successfully.");
+		/* Final log update */
+		if ($success > 0 || $failed > 0) {
+			$this->updateTransactionLog($success, $failed, $errorArray);
+		}
+
+		/* Sleep for 5 minutes before allowing the next job to execute */
+		Log::info("Job completed. Sleeping for 5 minutes before next execution.");
+		sleep(300);
+	}
+
+	protected function updateTransactionLog($success, $failed, $errorArray)
+	{
+		$log = TransactionLog::where('identifier', $this->batch()->id)->first();
+
+		if ($log) {
+			$desc = json_decode($log->description, true);
+			$desc["Success Count"] += $success;
+			$desc["Failed Count"] += $failed;
+			$desc["Errors"] = array_merge($desc["Errors"], $errorArray);
+
+			$log->update(['description' => json_encode($desc, JSON_UNESCAPED_UNICODE)]);
+		}
 	}
 
 	protected function getImageURLs(array $images): array
@@ -81,18 +119,17 @@ class ProductCopyToS3Job implements ShouldQueue
 			if (Str::startsWith($cleanImage, ['http://', 'https://'])) {
 				$cleanImage = $this->uploadImageFromURL($cleanImage);
 			}
-
-			$images[$key] = $cleanImage;
+			if ($cleanImage) {
+				$images[$key] = $cleanImage;
+			}
 		}
 		return $images;
 	}
 
 	protected function uploadImageFromURL(?string $url): ?string
 	{
-		$s3Disk = Storage::disk('s3');
-
 		if (!filter_var($url, FILTER_VALIDATE_URL)) {
-			Log::error("Invalid URL provided: " . $url);
+			Log::error("Invalid URL: " . $url);
 			return null;
 		}
 		try {
@@ -129,10 +166,18 @@ class ProductCopyToS3Job implements ShouldQueue
 				return null;
 			}
 
-			$originalPath = env('STORAGE_ENV') . "/products/{$fileBaseName}.webp";
+			/* Ensure image is in Truecolor format */
+			if (imageistruecolor($image) === false) {
+				imagepalettetotruecolor($image);
+			}
+
+			$originalPath = $this->storageEnv . "/products/{$fileBaseName}.webp";
 			ob_start();
 			imagewebp($image);
 			$originalData = ob_get_clean();
+
+			$s3Disk = Storage::disk('s3');
+			usleep(500000);
 			$s3Disk->put($originalPath, $originalData);
 			$imageUrl = $s3Disk->url($originalPath);
 			// $this->deleteLocalImages($fileBaseName);
@@ -143,15 +188,18 @@ class ProductCopyToS3Job implements ShouldQueue
 					continue;
 				}
 
-				$resizedPath = env('STORAGE_ENV') . "/products/{$fileBaseName}-{$width}x{$height}.webp";
+				$resizedPath = $this->storageEnv . "/products/{$fileBaseName}-{$width}x{$height}.webp";
 				ob_start();
 				imagewebp($resizedImage);
 				$resizedData = ob_get_clean();
+				usleep(500000);
 				$s3Disk->put($resizedPath, $resizedData);
 				// $this->deleteLocalImages("{$fileBaseName}-{$width}x{$height}");
 			}
 
 			imagedestroy($image);
+			unset($image, $imageContents, $originalData, $resizedData);
+			gc_collect_cycles();
 			return $imageUrl;
 		} catch (\Exception $e) {
 			Log::error("S3 Upload Error: " . $e->getMessage());

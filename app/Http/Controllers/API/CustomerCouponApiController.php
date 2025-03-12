@@ -56,84 +56,86 @@ class CustomerCouponApiController extends Controller
 
     //     return response()->json(['coupons' => $coupons]);
     // }
+
     public function getCustomerCoupons(Request $request)
-    {
-        $userId = Auth::id();
-    
-        if (!$userId) {
-            return response()->json(['message' => 'User not authenticated.'], 401);
-        }
-    
-        // Get all coupons related to the customer
-        $allCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
-                $query->where('customer_id', $userId);
-            })
-            ->get()
-            ->map(function ($discount) {
-                return [
-                    'id' => $discount->id,
-                    'code' => $discount->code,
-                    'value' => $discount->value,
-                    'type' => $discount->type,
-                    'min_order_price' => $discount->min_order_price,
-                    'start_date' => $discount->start_date,
-                    'end_date' => $discount->end_date,
-                ];
-            });
-    
-        // Get used coupons from ec_customer_used_coupons table
-        $usedCoupons = DB::table('ec_customer_used_coupons')
-            ->join('ec_discounts', 'ec_customer_used_coupons.discount_id', '=', 'ec_discounts.id')
-            ->where('ec_customer_used_coupons.customer_id', $userId)
-            ->get(['ec_discounts.id', 'ec_discounts.code', 'ec_discounts.value', 'ec_discounts.type', 'ec_discounts.min_order_price', 'ec_discounts.start_date', 'ec_discounts.end_date']);
-    
-        // Get expired coupons (past end_date)
-        $expiredCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
-                $query->where('customer_id', $userId);
-            })
-            ->where('end_date', '<', Carbon::now()) // Coupons that have expired
-            ->get()
-            ->map(function ($discount) {
-                return [
-                    'id' => $discount->id,
-                    'code' => $discount->code,
-                    'value' => $discount->value,
-                    'type' => $discount->type,
-                    'min_order_price' => $discount->min_order_price,
-                    'start_date' => $discount->start_date,
-                    'end_date' => $discount->end_date,
-                ];
-            });
-    
-        // Get available (valid) coupons
-        $availableCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
-                $query->where('customer_id', $userId);
-            })
-            ->where(function ($query) {
-                $query->where('end_date', '>=', Carbon::now())
-                      ->orWhereNull('end_date');
-            })
-            ->get()
-            ->map(function ($discount) {
-                return [
-                    'id' => $discount->id,
-                    'code' => $discount->code,
-                    'value' => $discount->value,
-                    'type' => $discount->type,
-                    'min_order_price' => $discount->min_order_price,
-                    'start_date' => $discount->start_date,
-                    'end_date' => $discount->end_date,
-                ];
-            });
-    
-        return response()->json([
-            'all_coupons' => $allCoupons, // This includes all coupons linked to the customer
-            'available_coupons' => $availableCoupons,
-            'used_coupons' => $usedCoupons,
-            'expired_coupons' => $expiredCoupons
-        ]);
+{
+    $userId = Auth::id();
+
+    if (!$userId) {
+        return response()->json(['message' => 'User not authenticated.'], 401);
     }
-    
+
+    // Get all coupons related to the customer
+    $allCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
+            $query->where('customer_id', $userId);
+        })
+        ->get()
+        ->map(function ($discount) {
+            return [
+                'id' => $discount->id,
+                'code' => $discount->code,
+                'value' => $discount->value,
+                'type' => $discount->type,
+                'min_order_price' => $discount->min_order_price,
+                'start_date' => $discount->start_date,
+                'end_date' => $discount->end_date,
+            ];
+        });
+
+    // Get used coupons from ec_customer_used_coupons table
+    $usedCoupons = DB::table('ec_customer_used_coupons')
+        ->join('ec_discounts', 'ec_customer_used_coupons.discount_id', '=', 'ec_discounts.id')
+        ->where('ec_customer_used_coupons.customer_id', $userId)
+        ->get(['ec_discounts.id', 'ec_discounts.code', 'ec_discounts.value', 'ec_discounts.type', 'ec_discounts.min_order_price', 'ec_discounts.start_date', 'ec_discounts.end_date']);
+
+    // Get expired coupons (past end_date)
+    $expiredCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
+            $query->where('customer_id', $userId);
+        })
+        ->where('end_date', '<', Carbon::now()) // Coupons that have expired
+        ->get()
+        ->map(function ($discount) {
+            return [
+                'id' => $discount->id,
+                'code' => $discount->code,
+                'value' => $discount->value,
+                'type' => $discount->type,
+                'min_order_price' => $discount->min_order_price,
+                'start_date' => $discount->start_date,
+                'end_date' => $discount->end_date,
+            ];
+        });
+
+    // Get available (valid) coupons
+    $availableCoupons = Discount::whereHas('customers', function ($query) use ($userId) {
+            $query->where('customer_id', $userId);
+        })
+        ->where(function ($query) {
+            $query->where('end_date', '>=', Carbon::now())
+                  ->orWhereNull('end_date');
+        })
+        ->get()
+        ->map(function ($discount) {
+            return [
+                'id' => $discount->id,
+                'code' => $discount->code,
+                'value' => $discount->value,
+                'type' => $discount->type,
+                'min_order_price' => $discount->min_order_price,
+                'start_date' => $discount->start_date,
+                'end_date' => $discount->end_date,
+            ];
+        });
+
+    return response()->json([
+        'all_coupons' => $allCoupons, // This includes all coupons linked to the customer
+        'available_coupons' => $availableCoupons,
+        'used_coupons' => $usedCoupons,
+        'expired_coupons' => $expiredCoupons
+    ]);
+}
+
+
 //     public function searchCustomerCoupons(Request $request)
 // {
 //     $userId = Auth::id();

@@ -283,7 +283,7 @@ public function addToCart(Request $request)
 //         'data' => $cartItems,
 //     ]);
 // }
-// public function viewCart(Request $request) old
+// public function viewCart(Request $request) old one
 // {
 //     $userId = Auth::id();
 //     $isUserLoggedIn = $userId !== null;
@@ -431,6 +431,7 @@ public function viewCart(Request $request)
         'data' => $cartItems,
     ]);
 }
+
 
 
 
