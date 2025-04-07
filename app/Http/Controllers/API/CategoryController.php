@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Botble\Ecommerce\Models\Brand;
 use Botble\Ecommerce\Models\Product;
+use Botble\Ecommerce\Models\AttributeValue;
+use Botble\Ecommerce\Models\Attribute;
+use Botble\Ecommerce\Models\AttributeGroup;
+use Botble\Ecommerce\Models\ProductAttribute;
 use Botble\Ecommerce\Models\ProductCategory;
 use Botble\Ecommerce\Models\Specification;
 
