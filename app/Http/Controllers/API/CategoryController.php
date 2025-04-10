@@ -982,41 +982,112 @@ class CategoryController extends Controller
 	
 		$paginatedProducts->setCollection($modifiedProducts);
 	
-		// Get all available attribute filters for this category
-		$attributeValues = DB::table('product_attributes as pa')
-			->join('attributes as at', 'at.id', '=', 'pa.attribute_id')
-			->whereIn('pa.product_id', $categoryProductIds)
-			->select('at.name as attribute_name', 'pa.attribute_value', 'at.id as attribute_id')
-			->get()
-			->groupBy('attribute_name');
-	
+		// Initialize filters array - will remain empty if subcategory doesn't exist
 		$filters = [];
-		foreach ($attributeValues as $attributeName => $values) {
-			$uniqueValues = $values->pluck('attribute_value')->unique()->filter()->values();
+		
+		// Initialize debug info
+		$debugInfo = [
+			'category_id' => $request->category_id,
+			'category_product_count' => count($categoryProductIds),
+		];
+		
+		// Get subcategory for this category
+		$subCategory = DB::table('sub_categories')
+			->where('category_id', $request->category_id)
+			->first();
+		
+		$debugInfo['has_subcategory'] = $subCategory ? true : false;
+		
+		// Only process attribute filters if the subcategory exists
+		if ($subCategory) {
+			$attributeIdsField = null;
+			$attributeIds = [];
+			
+			// Check which attribute ID field exists
+			if (property_exists($subCategory, 'attributes_ids') || isset($subCategory->attributes_ids)) {
+				$attributeIdsField = 'attributes_ids';
+			} else if (property_exists($subCategory, 'attributes_jd') || isset($subCategory->attributes_jd)) {
+				$attributeIdsField = 'attributes_jd';
+			}
+			
+			$debugInfo['attribute_ids_field'] = $attributeIdsField;
+			
+			// Process attribute IDs if the field exists and has value
+			if ($attributeIdsField && !empty($subCategory->$attributeIdsField)) {
+				$attributeIdsValue = $subCategory->$attributeIdsField;
+				
+				// Parse attribute IDs based on data type
+				if (is_string($attributeIdsValue)) {
+					$attributeIds = json_decode($attributeIdsValue, true);
+					$debugInfo['json_decode_error'] = json_last_error_msg();
+					
+					// If it's not valid JSON, try comma-separated format
+					if (json_last_error() !== JSON_ERROR_NONE) {
+						$attributeIds = explode(',', $attributeIdsValue);
+						$debugInfo['using_comma_separated'] = true;
+					}
+					// Special case: Check if we have an array containing a single string with comma-separated values
+					else if (count($attributeIds) === 1 && is_string($attributeIds[0]) && strpos($attributeIds[0], ',') !== false) {
+						$attributeIds = explode(',', $attributeIds[0]);
+						$debugInfo['using_nested_comma_separated'] = true;
+					}
+				} else {
+					$attributeIds = $attributeIdsValue;
+				}
+				
+				// Ensure we have an array of integers
+				$attributeIds = array_map('intval', (array)$attributeIds);
+				$debugInfo['attribute_ids_parsed'] = $attributeIds;
+				
+				// Only proceed if we have valid attribute IDs
+				if (!empty($attributeIds)) {
+					// Get attribute filters for this category, but only for the allowed attributes
+					$attributeValues = DB::table('product_attributes as pa')
+						->join('attributes as at', 'at.id', '=', 'pa.attribute_id')
+						->whereIn('pa.product_id', $categoryProductIds)
+						->whereIn('pa.attribute_id', $attributeIds)
+						->select('at.name as attribute_name', 'pa.attribute_value', 'at.id as attribute_id')
+						->get();
+						
+					$debugInfo['attribute_values_count'] = $attributeValues->count();
+					
+					// If we have any attribute values
+					if ($attributeValues->count() > 0) {
+						$attributeValues = $attributeValues->groupBy('attribute_name');
+						
+						// Process attribute filters
+						foreach ($attributeValues as $attributeName => $values) {
+							$uniqueValues = $values->pluck('attribute_value')->unique()->filter()->values();
 	
-			if ($uniqueValues->every(fn($val) => is_numeric($val)) && $uniqueValues->count() > 2) {
-				$sorted = $uniqueValues->map(fn($val) => (float)$val)->sort()->values();
-				$chunkCount = min(5, ceil($sorted->count() / 2));
-				$chunkSize = ceil($sorted->count() / $chunkCount);
+							if ($uniqueValues->every(fn($val) => is_numeric($val)) && $uniqueValues->count() > 2) {
+								$sorted = $uniqueValues->map(fn($val) => (float)$val)->sort()->values();
+								$chunkCount = min(5, ceil($sorted->count() / 2));
+								$chunkSize = ceil($sorted->count() / $chunkCount);
 	
-				$ranges = $sorted->chunk($chunkSize)->map(function ($chunk) {
-					return [
-						'min' => $chunk->first(),
-						'max' => $chunk->last(),
-					];
-				})->toArray();
+								$ranges = $sorted->chunk($chunkSize)->map(function ($chunk) {
+									return [
+										'min' => $chunk->first(),
+										'max' => $chunk->last(),
+									];
+								})->toArray();
 	
-				$filters[] = [
-					'specification_name' => $attributeName,
-					'specification_type' => 'range',
-					'specification_value' => $ranges,
-				];
+								$filters[] = [
+									'specification_name' => $attributeName,
+									'specification_type' => 'range',
+									'specification_value' => $ranges,
+								];
+							} else {
+								$filters[] = [
+									'specification_name' => $attributeName,
+									'specification_type' => 'fixed',
+									'specification_value' => $uniqueValues->values(),
+								];
+							}
+						}
+					}
+				}
 			} else {
-				$filters[] = [
-					'specification_name' => $attributeName,
-					'specification_type' => 'fixed',
-					'specification_value' => $uniqueValues->values(),
-				];
+				$debugInfo['attributes_field_empty'] = true;
 			}
 		}
 	
@@ -1029,12 +1100,14 @@ class CategoryController extends Controller
 			'filter_values' => [5, 4, 3, 2, 1],
 		];
 	
+		// For debugging purposes, add a debug key to the response
 		return response()->json([
 			'success' => true,
 			'filters' => $filters,
 			'products' => $paginatedProducts,
 			'brands' => $brands,
 			'rating_filter' => $ratingFilter,
+			'debug_info' => $debugInfo
 		]);
 	}
 
