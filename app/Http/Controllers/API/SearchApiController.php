@@ -652,6 +652,7 @@ class SearchApiController extends Controller
                 ->get()
                 ->map(function ($product) {
                     return [
+                        'id' => $product->id,
                         'name' => $product->name,
                         'url' => $product->url,
                         'image' => RvMedia::getImageUrl($product->image, 'thumb', false, RvMedia::getDefaultImage()),
@@ -671,6 +672,7 @@ class SearchApiController extends Controller
             // Mapping the data for output
             $categories = $categories->map(function ($category) {
                 return [
+                    'id' => $category->id,
                     'name' => $category->name,
                     'url' => $category->url,
                     'image' => RvMedia::getImageUrl($category->image, 'thumb', false, RvMedia::getDefaultImage()),
@@ -689,6 +691,7 @@ class SearchApiController extends Controller
 
             $brands = $brands->map(function ($brand) {
                 return [
+                    'id' => $brand->id,
                     'name' => $brand->name,
                     'url' => $brand->url,
                     'image' => RvMedia::getImageUrl($brand->logo, 'thumb', false, RvMedia::getDefaultImage()),
@@ -754,6 +757,7 @@ class SearchApiController extends Controller
             ->get()
             ->map(function ($category) {
                 return [
+                    'id' => $category->id,
                     'name' => $category->name,
                     'url' => $category->url,
                     'image' => RvMedia::getImageUrl($category->image, 'thumb', false, RvMedia::getDefaultImage()),
@@ -783,6 +787,7 @@ class SearchApiController extends Controller
             ->get()
             ->map(function ($brand) {
                 return [
+                    'id' => $brand->id,
                     'name' => $brand->name,
                     'url' => $brand->url,
                     'image' => RvMedia::getImageUrl($brand->logo, 'thumb', false, RvMedia::getDefaultImage()),
