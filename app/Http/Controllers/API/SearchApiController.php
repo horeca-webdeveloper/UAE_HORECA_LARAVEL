@@ -844,25 +844,24 @@ class SearchApiController extends Controller
     public function searchCategories(Request $request)
     {
         $query = $request->input('query');
-        
+    
         if (empty($query)) {
             return response()->json(['categories' => []]);
         }
     
-        // Use a cache key based on the query, so we cache results for the specific query
         $cacheKey = 'categories_search_' . md5($query);
-        
-        // Check if the result is cached
+    
         $categories = Cache::get($cacheKey);
     
-        // If not cached, query the database and cache the result
         if (!$categories) {
-            // Query to get categories with their slugs and parent category slugs
-            $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
-                ->orWhereHas('slugable', function($q) use ($query) {
-                    $q->where('key', 'LIKE', "%{$query}%");
+            $categories = ProductCategory::where('status', 'published') // Filter only published categories
+                ->where(function ($q) use ($query) {
+                    $q->where('name', 'LIKE', "%{$query}%")
+                      ->orWhereHas('slugable', function ($subQ) use ($query) {
+                          $subQ->where('key', 'LIKE', "%{$query}%");
+                      });
                 })
-                ->with(['slugable', 'parentCategory.slugable'])  // Eager load slugs and parent slugs
+                ->with(['slugable', 'parentCategory.slugable'])
                 ->take(10)
                 ->get()
                 ->map(function ($category) {
@@ -874,12 +873,12 @@ class SearchApiController extends Controller
                     ];
                 });
     
-            // Cache the result for 60 minutes (you can adjust this time)
-            Cache::put($cacheKey, $categories, 60); // Cache for 60 minutes
+            Cache::put($cacheKey, $categories, 60);
         }
     
         return response()->json(['categories' => $categories]);
     }
+    
     
     public function getSlugPath($category)
     {
