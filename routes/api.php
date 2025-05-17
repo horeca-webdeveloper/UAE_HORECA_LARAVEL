@@ -55,6 +55,9 @@ use App\Http\Controllers\API\ProductAttributeController;
 use App\Http\Controllers\API\SEOManagementController;
 use App\Http\Controllers\API\BrandPageController;
 
+use App\Http\Controllers\API\FaqApiController;
+
+Route::get('faqs/product/{product_id}', [FaqApiController::class, 'getFaqsByProduct']);
 
 
 Route::get('/seo-management', [SEOManagementController::class, 'index']);
