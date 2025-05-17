@@ -19,4 +19,74 @@ class ProductAttributeController extends Controller
         // Return the data in JSON format
         return response()->json($productAttributes);
     }
+
+    // public function getAttributesByProductWithGroup($productId)
+    // {
+    //     // Get product attributes with related attribute and attribute group
+    //     $productAttributes = ProductAttributes::with(['attribute.attributeGroup'])
+    //         ->where('product_id', $productId)
+    //         ->get();
+
+    //     // Grouping logic
+    //     $groupedAttributes = [];
+
+    //     foreach ($productAttributes as $productAttribute) {
+    //         $attribute = $productAttribute->attribute;
+    //         if (!$attribute) continue;
+
+    //         $groupName = $attribute->attributeGroup->name ?? 'Other';
+
+    //         $groupedAttributes[$groupName][] = [
+    //             'name'  => $attribute->name,
+    //             'value' => $productAttribute->attribute_value,
+    //         ];
+    //     }
+
+    //     // Formatting final response
+    //     $formatted = [];
+    //     foreach ($groupedAttributes as $section => $specs) {
+    //         $formatted[] = [
+    //             'section' => $section,
+    //             'specs' => $specs,
+    //         ];
+    //     }
+
+    //     return response()->json($formatted);
+    // }
+
+    public function getAttributesByProductWithGroup($productId)
+    {
+            $productAttributes = ProductAttributes::with(['attribute.attributeGroups'])
+            ->where('product_id', $productId)
+            ->get();
+
+        $groupedAttributes = [];
+
+        foreach ($productAttributes as $productAttribute) {
+            $attribute = $productAttribute->attribute;
+
+            if (!$attribute || $attribute->attributeGroups->isEmpty()) {
+                $groupName = 'Other';
+            } else {
+                // If attribute belongs to multiple groups, pick the first
+                $groupName = $attribute->attributeGroups->first()->name;
+            }
+
+            $groupedAttributes[$groupName][] = [
+                'name' => $attribute->name,
+                'value' => $productAttribute->attribute_value,
+            ];
+        }
+
+        // Final formatting
+        $formatted = [];
+        foreach ($groupedAttributes as $section => $specs) {
+            $formatted[] = [
+                'section' => $section,
+                'specs' => $specs,
+            ];
+        }
+
+        return response()->json($formatted);
+    }
 }

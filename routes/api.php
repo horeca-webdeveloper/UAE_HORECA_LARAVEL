@@ -56,12 +56,15 @@ use App\Http\Controllers\API\SEOManagementController;
 use App\Http\Controllers\API\BrandPageController;
 
 
+
 Route::get('/seo-management', [SEOManagementController::class, 'index']);
 Route::get('/seo-management/relational/{relational_id}', [SEOManagementController::class, 'getByRelationalId']);
 Route::get('seo/paragraphs/{relational_id}', [SEOManagementController::class, 'getParagraphData']);
 
 
 Route::get('product/{productId}/attributes', [ProductAttributeController::class, 'getAttributesByProduct']);
+Route::get('product-group/{productId}/attributes', [ProductAttributeController::class, 'getAttributesByProductWithGroup']);
+
 
 Route::post('/send-confirmation-email', [EmailNotificationController::class, 'sendConfirmationEmail']);
 
@@ -92,6 +95,7 @@ Route::middleware(['auth:sanctum'])->prefix('addresses')->group(function () {
 
 
 });
+Route::get('/products/{id}/related', [ProductApiController::class, 'relatedProducts']);
 Route::post('/upload-product-documents', [ProductController::class, 'uploadDocuments']);
 
 Route::middleware('auth:sanctum')->get('/order-tracking', [OrderTrackingController::class, 'trackOrder']);
@@ -221,8 +225,6 @@ Route::middleware('auth:sanctum')->post('/logout', [CustomerController::class, '
     Route::get('/products-guest', [ProductApiController::class, 'getAllPublicProducts']);
     Route::get('/product-public-listing-guest', [ProductApiController::class, 'getAllProductsLisingGuest']);
 
-    Route::get('/products/{id}/related', [ProductApiController::class, 'relatedProducts']);
-
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/apply-coupon', [CouponApiController::class, 'applyCoupon']);
@@ -325,4 +327,5 @@ Route::middleware('web')->group(function () {
     Route::get('brands/{id}/sale-products', [ProductApiController::class, 'saleProductsByBrand']);
     Route::get('brands/{id}/summary-stats', [ProductApiController::class, 'brandSummaryStats']);
     Route::get('/brands/alphabetical', [BrandApiController::class, 'getAllBrandsAlphabetically']);
+
 Route::get('/product-specifications', [ProductSpecificationApiController::class, 'getProductSpecifications']); // No productId in the URL

@@ -152,6 +152,8 @@ class Product extends BaseModel
         'minimum_order_quantity' => 'int',
         'maximum_order_quantity' => 'int',
         'specs_sheet' => 'array',
+        'description' => 'array',
+        'benefit_features' => 'array',
         // 'video_path'=> 'json',
 
     ];
@@ -881,4 +883,15 @@ class Product extends BaseModel
     {
         return $this->translations()->where('lang_code', $langCode)->first();
     }
+
+      // In Product model
+      public function attributes()
+      {
+          return $this->belongsToMany(Attribute::class, 'product_attributes'); // Adjust the pivot table name if needed
+      }
+  
+      public function faqs()
+      {
+          return $this->hasMany(Faq::class);
+      }
 }
