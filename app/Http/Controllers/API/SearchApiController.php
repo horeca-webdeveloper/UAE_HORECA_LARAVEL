@@ -643,7 +643,7 @@ class SearchApiController extends Controller
     public function search(Request $request)
     {
         $query = $request->input('query');
-    
+
         if (empty($query)) {
             $products = Product::where('status', 'published')
                 ->inRandomOrder()
@@ -658,8 +658,8 @@ class SearchApiController extends Controller
                         'image' => RvMedia::getImageUrl($product->image, 'thumb', false, RvMedia::getDefaultImage()),
                     ];
                 });
-    
-               // Fetch categories with associated products
+
+            // Fetch categories with associated products
                 $categories = Productcategory::with(['products' => function($query) {
                     $query->where('status', 'published')->take(3); // Only published products
                 }])->inRandomOrder()->take(4)->get();
@@ -671,12 +671,37 @@ class SearchApiController extends Controller
 
             // Mapping the data for output
             $categories = $categories->map(function ($category) {
+                // Get parent category if exists
+                $parentCategory = null;
+                $parentSlug = null;
+                $parentId = null;
+                $parentParentSlug = null;
+
+                if ($category->parent_id) {
+                    $parentCategory = Productcategory::with('slugable')->find($category->parent_id);
+                    if ($parentCategory) {
+                        $parentSlug = optional($parentCategory->slugable)->key;
+                        $parentId = $parentCategory->id;
+                        
+                        // Get grandparent if exists
+                        if ($parentCategory->parent_id) {
+                            $grandparentCategory = Productcategory::with('slugable')->find($parentCategory->parent_id);
+                            if ($grandparentCategory) {
+                                $parentParentSlug = optional($grandparentCategory->slugable)->key;
+                            }
+                        }
+                    }
+                }
+
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => optional($category->slugable)->key,
                     'url' => $category->url,
                     'image' => RvMedia::getImageUrl($category->image, 'thumb', false, RvMedia::getDefaultImage()),
+                    'parent_id' => $category->parent_id,
+                    'parent_slug' => $parentSlug,
+                    'parent_parent_slug' => $parentParentSlug,
                     'products' => $category->products->map(function ($product) {
                         return [
                             'id' => $product->id,
@@ -711,27 +736,26 @@ class SearchApiController extends Controller
             });
 
             
-    
             return response()->json([
                 'products' => $products,
                 'categories' => $categories,
                 'brands' => $brands,
             ]);
         }
-    
+
         $products = Product::where('status', 'published')
         ->where(function ($q) use ($query) {
             $q->where('name', 'LIKE', "{$query}%")
-              ->orWhere('name', 'LIKE', "%{$query}%")
-              ->orWhere('sku', 'LIKE', "{$query}%")
-              ->orWhere('sku', 'LIKE', "%{$query}%")
-              ->orWhereHas('slugable', function ($q) use ($query) {
-                  $q->where('key', 'LIKE', "{$query}%")
+            ->orWhere('name', 'LIKE', "%{$query}%")
+            ->orWhere('sku', 'LIKE', "{$query}%")
+            ->orWhere('sku', 'LIKE', "%{$query}%")
+            ->orWhereHas('slugable', function ($q) use ($query) {
+                $q->where('key', 'LIKE', "{$query}%")
                     ->orWhere('key', 'LIKE', "%{$query}%");
-              });
+            });
         })
         ->take(5)
-        ->with('slugable') // ✅ fixed
+        ->with('slugable') 
         ->get()
         ->map(function ($product) {
             return [
@@ -743,27 +767,51 @@ class SearchApiController extends Controller
                 'sale_price' => $product->sale_price,
             ];
         });
-    
 
-    
+
         $categories = Productcategory::where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "{$query}%")
-                  ->orWhere('name', 'LIKE', "%{$query}%")
-                  ->orWhereHas('slugable', function ($q) use ($query) {
-                      $q->where('key', 'LIKE', "{$query}%")
+                ->orWhere('name', 'LIKE', "%{$query}%")
+                ->orWhereHas('slugable', function ($q) use ($query) {
+                    $q->where('key', 'LIKE', "{$query}%")
                         ->orWhere('key', 'LIKE', "%{$query}%");
-                  });
+                });
             })
             ->take(5)
             ->with('slugable')
             ->get()
             ->map(function ($category) {
+                // Get parent category if exists
+                $parentCategory = null;
+                $parentSlug = null;
+                $parentId = null;
+                $parentParentSlug = null;
+
+                if ($category->parent_id) {
+                    $parentCategory = Productcategory::with('slugable')->find($category->parent_id);
+                    if ($parentCategory) {
+                        $parentSlug = optional($parentCategory->slugable)->key;
+                        $parentId = $parentCategory->id;
+                        
+                        // Get grandparent if exists
+                        if ($parentCategory->parent_id) {
+                            $grandparentCategory = Productcategory::with('slugable')->find($parentCategory->parent_id);
+                            if ($grandparentCategory) {
+                                $parentParentSlug = optional($grandparentCategory->slugable)->key;
+                            }
+                        }
+                    }
+                }
+
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
                     'slug' => optional($category->slugable)->key,
                     'url' => $category->url,
                     'image' => RvMedia::getImageUrl($category->image, 'thumb', false, RvMedia::getDefaultImage()),
+                    'parent_id' => $category->parent_id,
+                    'parent_slug' => $parentSlug,
+                    'parent_parent_slug' => $parentParentSlug,
                     'products' => $category->products->map(function ($product) {
                         return [
                             'id' => $product->id,
@@ -776,14 +824,14 @@ class SearchApiController extends Controller
                     }),
                 ];
             });
-    
+
         $brands = Brand::where(function ($q) use ($query) {
                 $q->where('name', 'LIKE', "{$query}%")
-                  ->orWhere('name', 'LIKE', "%{$query}%")
-                  ->orWhereHas('slugable', function ($q) use ($query) {
-                      $q->where('key', 'LIKE', "{$query}%")
+                ->orWhere('name', 'LIKE', "%{$query}%")
+                ->orWhereHas('slugable', function ($q) use ($query) {
+                    $q->where('key', 'LIKE', "{$query}%")
                         ->orWhere('key', 'LIKE', "%{$query}%");
-                  });
+                });
             })
             ->take(5)
             ->with('slugable')
@@ -807,7 +855,7 @@ class SearchApiController extends Controller
                     }),
                 ];
             });
-    
+
         return response()->json([
             'products' => $products,
             'categories' => $categories,
