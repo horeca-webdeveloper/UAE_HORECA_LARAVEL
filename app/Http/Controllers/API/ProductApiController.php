@@ -163,23 +163,34 @@ class ProductApiController extends Controller
                         }
                         
 
+                        // // Handle images
+                        // $product->images = collect($product->images)->map(function ($image) {
+                        //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                        //         return $image;
+                        //     }
+                        //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                        //     return $baseUrl . '/' . ltrim($image, '/');
+                        // });
+
+                        // $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
+
+                        // $product->video_path = collect($videoPaths)->map(function ($video) {
+                        //     if (filter_var($video, FILTER_VALIDATE_URL)) {
+                        //         return $video; // If it's already a full URL, return it.
+                        //     }
+                        //     return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                        // });
                         // Handle images
                         $product->images = collect($product->images)->map(function ($image) {
-                            if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                return $image;
-                            }
-                            $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                            return $baseUrl . '/' . ltrim($image, '/');
+                            return $image; // Already a full URL, just return it
                         });
 
-                        $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
-
+                        // Handle videos
+                        $videoPaths = json_decode($product->video_path, true);
                         $product->video_path = collect($videoPaths)->map(function ($video) {
-                            if (filter_var($video, FILTER_VALIDATE_URL)) {
-                                return $video; // If it's already a full URL, return it.
-                            }
-                            return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                            return $video; // Already a full URL, just return it
                         });
+
 
 
                         // Add review and stock details
@@ -273,12 +284,15 @@ class ProductApiController extends Controller
                                         'left_stock' => $fbProduct->left_stock ?? 0,
                                         'currency' => $fbProduct->currency->title ?? 'USD',
                                         'in_wishlist' => $fbProduct->in_wishlist ?? false,
+                                        // 'images' => collect($fbProduct->images)->map(function ($image) {
+                                        //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                                        //         return $image;
+                                        //     }
+                                        //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                                        //     return $baseUrl . '/' . ltrim($image, '/');
+                                        // })->toArray(),
                                         'images' => collect($fbProduct->images)->map(function ($image) {
-                                            if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                                return $image;
-                                            }
-                                            $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                                            return $baseUrl . '/' . ltrim($image, '/');
+                                            return $image;
                                         })->toArray(),
                                         'original_price' => $fbProduct->price,
                                         'front_sale_price' => $fbProduct->price,
@@ -338,14 +352,15 @@ class ProductApiController extends Controller
                                 ->get();
 
                             $compareProducts->transform(function ($compareProduct) {
-                                $compareProduct->images = collect($compareProduct->images)->map(function ($image) {
-                                    if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                        return $image;
-                                    }
-                                    $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                                    return $baseUrl . '/' . ltrim($image, '/');
-                                });
-
+                                // $compareProduct->images = collect($compareProduct->images)->
+                                // map(function ($image) {
+                                //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                                //         return $image;
+                                //     }
+                                //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                                //     return $baseUrl . '/' . ltrim($image, '/');
+                                // });
+                                $compareProduct->images = $compareProduct->images;
                                 $totalReviews = $compareProduct->reviews->count();
                                 $avgRating = $totalReviews > 0 ? $compareProduct->reviews->avg('star') : null;
 
@@ -518,21 +533,31 @@ class ProductApiController extends Controller
                         
 
                         // Handle images
-                        $product->images = collect($product->images)->map(function ($image) {
-                            if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                return $image;
-                            }
-                            $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                            return $baseUrl . '/' . ltrim($image, '/');
-                        });
-                        $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
+                        // $product->images = collect($product->images)->map(function ($image) {
+                        //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                        //         return $image;
+                        //     }
+                        //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                        //     return $baseUrl . '/' . ltrim($image, '/');
+                        // });
+                        // $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
 
-                        $product->video_path = collect($videoPaths)->map(function ($video) {
-                            if (filter_var($video, FILTER_VALIDATE_URL)) {
-                                return $video; // If it's already a full URL, return it.
-                            }
-                            return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
-                        });
+                        // $product->video_path = collect($videoPaths)->map(function ($video) {
+                        //     if (filter_var($video, FILTER_VALIDATE_URL)) {
+                        //         return $video; // If it's already a full URL, return it.
+                        //     }
+                        //     return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                        // });
+
+                        $product->images = collect($product->images)->map(function ($image) {
+                        return $image;
+                    });
+
+                    $videoPaths = json_decode($product->video_path, true);
+                    $product->video_path = collect($videoPaths)->map(function ($video) {
+                        return $video;
+                    });
+
 
                         // Add review and stock details
                         $totalReviews = $product->reviews->count();
@@ -628,12 +653,15 @@ class ProductApiController extends Controller
                                         'left_stock' => $fbProduct->left_stock ?? 0,
                                         'currency' => $fbProduct->currency->title ?? 'USD',
                                         'in_wishlist' => $fbProduct->in_wishlist ?? false,
+                                        // 'images' => collect($fbProduct->images)->map(function ($image) {
+                                        //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                                        //         return $image;
+                                        //     }
+                                        //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                                        //     return $baseUrl . '/' . ltrim($image, '/');
+                                        // })->toArray(),
                                         'images' => collect($fbProduct->images)->map(function ($image) {
-                                            if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                                return $image;
-                                            }
-                                            $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                                            return $baseUrl . '/' . ltrim($image, '/');
+                                            return $image;
                                         })->toArray(),
                                         'original_price' => $fbProduct->price,
                                         'front_sale_price' => $fbProduct->price,
@@ -692,13 +720,15 @@ class ProductApiController extends Controller
                                 ->get();
 
                             $compareProducts->transform(function ($compareProduct) {
-                                $compareProduct->images = collect($compareProduct->images)->map(function ($image) {
-                                    if (filter_var($image, FILTER_VALIDATE_URL)) {
-                                        return $image;
-                                    }
-                                    $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
-                                    return $baseUrl . '/' . ltrim($image, '/');
-                                });
+                                // $compareProduct->images = collect($compareProduct->images)->map(function ($image) {
+                                //     if (filter_var($image, FILTER_VALIDATE_URL)) {
+                                //         return $image;
+                                //     }
+                                //     $baseUrl = (strpos($image, 'storage/products/') === 0) ? url('storage/products/') : url('storage/');
+                                //     return $baseUrl . '/' . ltrim($image, '/');
+                                // });
+
+                               $compareProduct->images = $compareProduct->images;
 
                                 $totalReviews = $compareProduct->reviews->count();
                                 $avgRating = $totalReviews > 0 ? $compareProduct->reviews->avg('star') : null;
@@ -904,18 +934,28 @@ class ProductApiController extends Controller
                 }
 
             // Select only required fields for the response
+            // $product->images = collect($product->images)->map(function ($image) {
+            //     return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+            // });
+
+            // $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
+
+            // $product->video_path = collect($videoPaths)->map(function ($video) {
+            //     if (filter_var($video, FILTER_VALIDATE_URL)) {
+            //         return $video; // If it's already a full URL, return it.
+            //     }
+            //     return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+            // });
+
             $product->images = collect($product->images)->map(function ($image) {
-                return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+                return $image;
             });
 
-            $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
-
+            $videoPaths = json_decode($product->video_path, true);
             $product->video_path = collect($videoPaths)->map(function ($video) {
-                if (filter_var($video, FILTER_VALIDATE_URL)) {
-                    return $video; // If it's already a full URL, return it.
-                }
-                return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                return $video;
             });
+
 
             $totalReviews = $product->reviews->count();
             $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
@@ -1204,18 +1244,28 @@ class ProductApiController extends Controller
                         $products->getCollection()->transform(function ($product)  {
 
                             // Select only required fields for the response
+                            // $product->images = collect($product->images)->map(function ($image) {
+                            //     return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+                            // });
+
+                            // $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
+
+                            // $product->video_path = collect($videoPaths)->map(function ($video) {
+                            //     if (filter_var($video, FILTER_VALIDATE_URL)) {
+                            //         return $video; // If it's already a full URL, return it.
+                            //     }
+                            //     return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                            // });
+
                             $product->images = collect($product->images)->map(function ($image) {
-                                return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+                                return $image;
                             });
 
-                            $videoPaths = json_decode($product->video_path, true); // Decode JSON to array
-
+                            $videoPaths = json_decode($product->video_path, true);
                             $product->video_path = collect($videoPaths)->map(function ($video) {
-                                if (filter_var($video, FILTER_VALIDATE_URL)) {
-                                    return $video; // If it's already a full URL, return it.
-                                }
-                                return url('storage/' . ltrim($video, '/')); // Manually construct the full URL
+                                return $video;
                             });
+
 
                             $totalReviews = $product->reviews->count();
                             $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
@@ -1746,14 +1796,23 @@ public function relatedProducts($id)
         ->get();
 
     $transformed = $relatedProducts->map(function ($product) use ($wishlistProductIds) {
-        $product->images = collect($product->images)->map(function ($image) {
-            return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
-        });
+        // $product->images = collect($product->images)->map(function ($image) {
+        //     return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+        // });
 
-        $videoPaths = json_decode($product->video_path, true) ?? [];
-        $product->video_path = collect($videoPaths)->map(function ($video) {
-            return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
-        });
+        // $videoPaths = json_decode($product->video_path, true) ?? [];
+        // $product->video_path = collect($videoPaths)->map(function ($video) {
+        //     return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
+        // });
+         $product->images = collect($product->images)->map(function ($image) {
+                    return $image;
+                });
+
+                $videoPaths = json_decode($product->video_path, true);
+                $product->video_path = collect($videoPaths)->map(function ($video) {
+                    return $video;
+                });
+
 
         $totalReviews = $product->reviews->count();
         $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
@@ -1831,14 +1890,23 @@ public function productsByBrand($id, Request $request)
 
     // Transform each product
     $transformed = collect($products->items())->map(function ($product) use ($wishlistProductIds) {
+        // $product->images = collect($product->images)->map(function ($image) {
+        //     return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+        // });
+
+        // $videoPaths = json_decode($product->video_path, true) ?? [];
+        // $product->video_path = collect($videoPaths)->map(function ($video) {
+        //     return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
+        // });
         $product->images = collect($product->images)->map(function ($image) {
-            return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+            return $image;
         });
 
-        $videoPaths = json_decode($product->video_path, true) ?? [];
+        $videoPaths = json_decode($product->video_path, true);
         $product->video_path = collect($videoPaths)->map(function ($video) {
-            return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
+            return $video;
         });
+
 
         $totalReviews = $product->reviews->count();
         $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
@@ -1923,15 +1991,23 @@ public function saleProductsByBrand($id, Request $request)
         ->paginate($perPage);
 
     $transformed = collect($products->items())->map(function ($product) use ($wishlistProductIds) {
+        // $product->images = collect($product->images)->map(function ($image) {
+        //     return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
+        // });
+
+        // $videoPaths = json_decode($product->video_path, true) ?? [];
+        // $product->video_path = collect($videoPaths)->map(function ($video) {
+        //     return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
+        // });
+
         $product->images = collect($product->images)->map(function ($image) {
-            return filter_var($image, FILTER_VALIDATE_URL) ? $image : url('storage/' . ltrim($image, '/'));
-        });
+         return $image;
+            });
 
-        $videoPaths = json_decode($product->video_path, true) ?? [];
-        $product->video_path = collect($videoPaths)->map(function ($video) {
-            return filter_var($video, FILTER_VALIDATE_URL) ? $video : url('storage/' . ltrim($video, '/'));
-        });
-
+            $videoPaths = json_decode($product->video_path, true);
+            $product->video_path = collect($videoPaths)->map(function ($video) {
+                return $video;
+            });
         $totalReviews = $product->reviews->count();
         $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
         $quantity = $product->quantity ?? 0;
