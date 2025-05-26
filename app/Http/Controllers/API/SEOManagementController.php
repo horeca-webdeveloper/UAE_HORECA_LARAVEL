@@ -70,14 +70,15 @@ class SEOManagementController extends Controller
                     'paragraph_2' => $item->paragraph_2,
                     'paragraph_3' => $item->paragraph_3,
                     'paragraph_4' => $item->paragraph_4,
-                    'popular_tags' => $item->popular_tags,
+                    'popular_tags' => json_decode($item->popular_tags, true) ?? [],
                 ];
             });
-
+    
         return response()->json([
             'status' => true,
             'data' => $seoData
         ]);
     }
+    
 
 }
