@@ -32,7 +32,7 @@
 //             ->take(5)
 //             ->get();
 
-//         // Search in `ec_product_categories` table for name, limit to 5 results
+//         // Search in `categories` table for name, limit to 5 results
 //         $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
 //             ->take(5)
 //             ->get();
@@ -82,7 +82,7 @@
 //                 ->take(5)
 //                 ->get();
 
-//             // Search in `ec_product_categories` table for name, limit to 5 results
+//             // Search in `categories` table for name, limit to 5 results
 //             $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
 //                 ->take(5)
 //                 ->get();
@@ -132,7 +132,7 @@
 //                 ->take(5)
 //                 ->get();
 
-//             // Search in `ec_product_categories` table for name, limit to 5 results
+//             // Search in `categories` table for name, limit to 5 results
 //             $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
 //                 ->take(5)
 //                 ->get();
@@ -249,7 +249,7 @@ class SearchApiController extends Controller
     // public function search(Request $request)
     // {
     //     $query = $request->input('query');
-    
+
     //     if (empty($query)) {
     //         // Default response with random items
     //         $products = Product::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($product) {
@@ -262,7 +262,7 @@ class SearchApiController extends Controller
     //                 'slug' => optional($product->slugable)->key, // Fetch slug from morph relation
     //             ];
     //         });
-    
+
     //         // $categories = Productcategory::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($category) {
     //         //     return [
     //         //         'id' => $category->id,
@@ -293,18 +293,18 @@ class SearchApiController extends Controller
     //             ->map(function ($category) {
     //                 $slugPath = [];
     //                 $current = $category;
-                    
+
     //                 // Get parent slugs
     //                 while ($current->parent_id) {
     //                     $parent = Productcategory::with('slugable')
     //                         ->find($current->parent_id);
-                        
+
     //                     if ($parent && $parent->slugable) {
     //                         array_unshift($slugPath, $parent->slugable->key);
     //                     }
     //                     $current = $parent;
     //                 }
-                    
+
     //                 // Add current category's slug
     //                 if ($category->slugable) {
     //                     $slugPath[] = $category->slugable->key;
@@ -327,7 +327,7 @@ class SearchApiController extends Controller
     //                     }),
     //                 ];
     //             });
-    
+
     //         $brands = Brand::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($brand) {
     //             return [
     //                 'id' => $brand->id,
@@ -365,7 +365,7 @@ class SearchApiController extends Controller
     //                     'sale_price' => $product->sale_price,
     //                 ];
     //             });
-    
+
     //         // $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
     //         //     ->orWhereHas('slugable', function ($q) use ($query) {
     //         //         $q->where('key', 'LIKE', "%{$query}%");
@@ -393,23 +393,23 @@ class SearchApiController extends Controller
     //         $categories = Productcategory::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($category) {
     //             $slugPath = [];
     //             $current = $category;
-                
+
     //             // Get parent slugs
     //             while ($current->parent_id) {
     //                 $parent = Productcategory::with('slugable')
     //                     ->find($current->parent_id);
-                    
+
     //                 if ($parent && $parent->slugable) {
     //                     array_unshift($slugPath, $parent->slugable->key);
     //                 }
     //                 $current = $parent;
     //             }
-                
+
     //             // Add current category's slug
     //             if ($category->slugable) {
     //                 $slugPath[] = $category->slugable->key;
     //             }
-            
+
     //             return [
     //                 'id' => $category->id,
     //                 'name' => $category->name,
@@ -427,7 +427,7 @@ class SearchApiController extends Controller
     //                 }),
     //             ];
     //         });
-    
+
     //         $brands = Brand::where('name', 'LIKE', "%{$query}%")
     //             ->orWhereHas('slugable', function ($q) use ($query) {
     //                 $q->where('key', 'LIKE', "%{$query}%");
@@ -452,7 +452,7 @@ class SearchApiController extends Controller
     //                 ];
     //             });
     //     }
-    
+
     //     return response()->json([
     //         'products' => $products,
     //         'categories' => $categories,
@@ -464,7 +464,7 @@ class SearchApiController extends Controller
     // public function search(Request $request)
     // {
     //     $query = $request->input('query');
-    
+
     //     if (empty($query)) {
     //         // Default response with random items
     //         $products = Product::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($product) {
@@ -477,12 +477,12 @@ class SearchApiController extends Controller
     //                 'slug' => optional($product->slugable)->key, // Fetch slug from morph relation
     //             ];
     //         });
-    
+
     //         // Random categories
     //         $categories = Productcategory::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($category) {
     //             $slugPath = [];
     //             $current = $category;
-    
+
     //             // Get parent slugs
     //             while ($current->parent_id) {
     //                 $parent = Productcategory::with('slugable')->find($current->parent_id);
@@ -491,12 +491,12 @@ class SearchApiController extends Controller
     //                 }
     //                 $current = $parent;
     //             }
-    
+
     //             // Add current category's slug
     //             if ($category->slugable) {
     //                 $slugPath[] = $category->slugable->key;
     //             }
-    
+
     //             return [
     //                 'id' => $category->id,
     //                 'name' => $category->name,
@@ -514,7 +514,7 @@ class SearchApiController extends Controller
     //                 }),
     //             ];
     //         });
-    
+
     //         // Random brands
     //         $brands = Brand::inRandomOrder()->take(4)->with('slugable')->get()->map(function ($brand) {
     //             return [
@@ -552,7 +552,7 @@ class SearchApiController extends Controller
     //                     'sale_price' => $product->sale_price,
     //                 ];
     //             });
-    
+
     //         // Search categories and include products in matching categories
     //         $categories = Productcategory::where('name', 'LIKE', "%{$query}%")
     //             ->orWhereHas('slugable', function ($q) use ($query) {
@@ -566,7 +566,7 @@ class SearchApiController extends Controller
     //             ->map(function ($category) {
     //                 $slugPath = [];
     //                 $current = $category;
-    
+
     //                 // Get parent slugs
     //                 while ($current->parent_id) {
     //                     $parent = Productcategory::with('slugable')->find($current->parent_id);
@@ -575,17 +575,17 @@ class SearchApiController extends Controller
     //                     }
     //                     $current = $parent;
     //                 }
-    
+
     //                 // Add current category's slug
     //                 if ($category->slugable) {
     //                     $slugPath[] = $category->slugable->key;
     //                 }
-    
+
     //                 // **Important Update Here**: Filter categories with no matching products
     //                 $category->products = $category->products->filter(function ($product) {
     //                     return !empty($product->name); // Only return non-empty products
     //                 });
-    
+
     //                 return [
     //                     'id' => $category->id,
     //                     'name' => $category->name,
@@ -606,7 +606,7 @@ class SearchApiController extends Controller
     //             ->filter(function ($category) {
     //                 return $category->products->isNotEmpty(); // Remove categories with no matching products
     //             });
-    
+
     //         // Search brands
     //         $brands = Brand::where('name', 'LIKE', "%{$query}%")
     //             ->orWhereHas('slugable', function ($q) use ($query) {
@@ -632,14 +632,14 @@ class SearchApiController extends Controller
     //                 ];
     //             });
     //     }
-    
+
     //     return response()->json([
     //         'products' => $products,
     //         'categories' => $categories,
     //         'brands' => $brands,
     //     ]);
     // }
-    
+
     public function search(Request $request)
     {
         $query = $request->input('query');
@@ -682,7 +682,7 @@ class SearchApiController extends Controller
                     if ($parentCategory) {
                         $parentSlug = optional($parentCategory->slugable)->key;
                         $parentId = $parentCategory->id;
-                        
+
                         // Get grandparent if exists
                         if ($parentCategory->parent_id) {
                             $grandparentCategory = Productcategory::with('slugable')->find($parentCategory->parent_id);
@@ -735,7 +735,7 @@ class SearchApiController extends Controller
                 ];
             });
 
-            
+
             return response()->json([
                 'products' => $products,
                 'categories' => $categories,
@@ -755,7 +755,7 @@ class SearchApiController extends Controller
             });
         })
         ->take(5)
-        ->with('slugable') 
+        ->with('slugable')
         ->get()
         ->map(function ($product) {
             return [
@@ -792,7 +792,7 @@ class SearchApiController extends Controller
                     if ($parentCategory) {
                         $parentSlug = optional($parentCategory->slugable)->key;
                         $parentId = $parentCategory->id;
-                        
+
                         // Get grandparent if exists
                         if ($parentCategory->parent_id) {
                             $grandparentCategory = Productcategory::with('slugable')->find($parentCategory->parent_id);
@@ -862,8 +862,8 @@ class SearchApiController extends Controller
             'brands' => $brands,
         ]);
     }
-    
-    
+
+
     // public function searchCategories(Request $request)
     // {
     //     $query = $request->input('query');
@@ -892,15 +892,15 @@ class SearchApiController extends Controller
     public function searchCategories(Request $request)
     {
         $query = $request->input('query');
-    
+
         if (empty($query)) {
             return response()->json(['categories' => []]);
         }
-    
+
         $cacheKey = 'categories_search_' . md5($query);
-    
+
         $categories = Cache::get($cacheKey);
-    
+
         if (!$categories) {
             $categories = ProductCategory::where('status', 'published') // Filter only published categories
                 ->where(function ($q) use ($query) {
@@ -920,19 +920,19 @@ class SearchApiController extends Controller
                         'slug_path' => $this->getSlugPath($category),
                     ];
                 });
-    
+
             Cache::put($cacheKey, $categories, 60);
         }
-    
+
         return response()->json(['categories' => $categories]);
     }
-    
-    
+
+
     public function getSlugPath($category)
     {
         $slugPath = [];
         $current = $category;
-    
+
         // Collect parent categories slugs efficiently
         while ($current->parent_id) {
             $parent = $current->parentCategory; // Lazy load parent category
@@ -941,12 +941,12 @@ class SearchApiController extends Controller
             }
             $current = $parent;
         }
-    
+
         // Add the current category's slug
         if ($category->slugable) {
             $slugPath[] = $category->slugable->key;
         }
-    
+
         return implode('/', $slugPath);
     }
 
