@@ -395,6 +395,12 @@ class ProductApiController extends Controller
                         // Add tags and types
                         $product->tags = $product->tags;
                         $product->producttypes = $product->producttypes;
+                        $product->category_list = $product->categories->map(function ($category) {
+                            return [
+                                'id' => $category->id,
+                                'name' => $category->name,
+                            ];
+                        });
 
                         return $product;
                     });
@@ -764,6 +770,12 @@ class ProductApiController extends Controller
                         // Add tags and types
                         $product->tags = $product->tags;
                         $product->producttypes = $product->producttypes;
+                        $product->category_list = $product->categories->map(function ($category) {
+                            return [
+                                'id' => $category->id,
+                                'name' => $category->name,
+                            ];
+                        });
 
                         return $product;
                     });
