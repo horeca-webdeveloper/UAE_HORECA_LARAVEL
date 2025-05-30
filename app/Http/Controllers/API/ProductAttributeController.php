@@ -20,30 +20,97 @@ class ProductAttributeController extends Controller
     //     return response()->json($productAttributes);
     // }
 
+    // public function getNutritionFactsByProduct($productId)
+    // {
+    //     // Fetch attributes only under the "Nutrition Facts Per Serving Group"
+    //     $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
+    //         $query->whereHas('attributeGroup', function ($q) {
+    //             $q->where('name', 'Nutrition Facts Per Serving Group');
+    //         });
+    //     }])
+    //     ->where('product_id', $productId)
+    //     ->get(['attribute_value', 'attribute_id']);
+
+    //     // Filter to only include those with valid attribute relation
+    //     $nutritionFacts = $productAttributes->filter(function ($item) {
+    //         return $item->attribute !== null;
+    //     })->values();
+
+    //     if ($nutritionFacts->isEmpty()) {
+    //         return response()->json([
+    //             'message' => 'Nutrition Facts Per Serving Group not found for this product.'
+    //         ], 200);
+    //     }
+
+    //     return response()->json($nutritionFacts);
+    // }
     public function getNutritionFactsByProduct($productId)
-    {
-        // Fetch attributes only under the "Nutrition Facts Per Serving Group"
-        $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
-            $query->whereHas('attributeGroup', function ($q) {
-                $q->where('name', 'Nutrition Facts Per Serving Group');
-            });
-        }])
-        ->where('product_id', $productId)
-        ->get(['attribute_value', 'attribute_id']);
+{
+    // Keyword-based sort order (lowercase)
+    $sortKeywords = [
+        'serving',
+        'calories',
+        'total fat',
+        'saturated fat',
+        'trans fat',
+        'cholesterol',
+        'sodium',
+        'total carbohydrate',
+        'dietary fiber',
+        'total sugars',
+        'added sugars',
+        'protein',
+        'vitamin d',
+        'calcium',
+        'iron',
+        'potassium'
+    ];
 
-        // Filter to only include those with valid attribute relation
-        $nutritionFacts = $productAttributes->filter(function ($item) {
-            return $item->attribute !== null;
-        })->values();
+    // Fetch product attributes in the group
+    $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
+        $query->whereHas('attributeGroup', function ($q) {
+            $q->where('name', 'Nutrition Facts Per Serving Group');
+        })->with('attributeGroup');
+    }])
+    ->where('product_id', $productId)
+    ->get(['attribute_value', 'attribute_id']);
 
-        if ($nutritionFacts->isEmpty()) {
-            return response()->json([
-                'message' => 'Nutrition Facts Per Serving Group not found for this product.'
-            ], 200);
-        }
+    // Filter out null attributes
+    $nutritionFacts = $productAttributes->filter(function ($item) {
+        return $item->attribute !== null;
+    });
 
-        return response()->json($nutritionFacts);
+    if ($nutritionFacts->isEmpty()) {
+        return response()->json([
+            'message' => 'Nutrition Facts Per Serving Group not found for this product.'
+        ], 200);
     }
+
+    // Sort dynamically based on keyword order
+    $sortedFacts = $nutritionFacts->sortBy(function ($item) use ($sortKeywords) {
+        $name = strtolower($item->attribute->name);
+        foreach ($sortKeywords as $index => $keyword) {
+            if (strpos($name, $keyword) !== false) {
+                return $index;
+            }
+        }
+        return count($sortKeywords) + 1; // Unknown attributes go to end
+    })->values();
+
+    // Build the final response
+    $response = [
+        'group_name' => $sortedFacts[0]->attribute->attributeGroup->name ?? 'Nutrition Facts Per Serving Group',
+        'attributes' => $sortedFacts->map(function ($item) {
+            return [
+                'name'  => $item->attribute->name,
+                'value' => $item->attribute_value
+            ];
+        })
+    ];
+
+    return response()->json($response);
+}
+
 
     public function getAttributesByProduct($productId)
     {
