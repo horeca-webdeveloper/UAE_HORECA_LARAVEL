@@ -194,7 +194,7 @@ class ProductAttributeController extends Controller
     
         $rightOrder = [
             'Type',
-            ' Pack Type',
+            'Pack Type',
             'Selling Unit',
             'Warranty',
             'Certification',
