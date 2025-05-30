@@ -20,30 +20,30 @@ class ProductAttributeController extends Controller
     //     return response()->json($productAttributes);
     // }
 
-    // public function getNutritionFactsByProduct($productId)
-    // {
-    //     // Fetch attributes only under the "Nutrition Facts Per Serving Group"
-    //     $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
-    //         $query->whereHas('attributeGroup', function ($q) {
-    //             $q->where('name', 'Nutrition Facts Per Serving Group');
-    //         });
-    //     }])
-    //     ->where('product_id', $productId)
-    //     ->get(['attribute_value', 'attribute_id']);
+    public function getNutritionFactsByProduct1($productId)
+    {
+        // Fetch attributes only under the "Nutrition Facts Per Serving Group"
+        $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
+            $query->whereHas('attributeGroup', function ($q) {
+                $q->where('name', 'Nutrition Facts Per Serving Group');
+            });
+        }])
+        ->where('product_id', $productId)
+        ->get(['attribute_value', 'attribute_id']);
 
-    //     // Filter to only include those with valid attribute relation
-    //     $nutritionFacts = $productAttributes->filter(function ($item) {
-    //         return $item->attribute !== null;
-    //     })->values();
+        // Filter to only include those with valid attribute relation
+        $nutritionFacts = $productAttributes->filter(function ($item) {
+            return $item->attribute !== null;
+        })->values();
 
-    //     if ($nutritionFacts->isEmpty()) {
-    //         return response()->json([
-    //             'message' => 'Nutrition Facts Per Serving Group not found for this product.'
-    //         ], 200);
-    //     }
+        if ($nutritionFacts->isEmpty()) {
+            return response()->json([
+                'message' => 'Nutrition Facts Per Serving Group not found for this product.'
+            ], 200);
+        }
 
-    //     return response()->json($nutritionFacts);
-    // }
+        return response()->json($nutritionFacts);
+    }
     public function getNutritionFactsByProduct($productId)
 {
     // Keyword-based sort order (lowercase)
