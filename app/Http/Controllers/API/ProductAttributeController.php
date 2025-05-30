@@ -164,6 +164,73 @@ class ProductAttributeController extends Controller
         return response()->json($formatted);
     }
 
+    public function getAttributesByProduct1($productId)
+    {
+        $productAttributes = ProductAttributes::with(['attribute' => function ($query) {
+            $query->whereHas('attributeGroup', function ($q) {
+                $q->where('name', '!=', 'Nutrition Facts Per Serving Group');
+            });
+        }])
+        ->where('product_id', $productId)
+        ->get(['attribute_value', 'attribute_id']);
+
+        // Filter out null attributes
+        $filteredAttributes = $productAttributes->filter(function ($item) {
+            return $item->attribute !== null;
+        })->values();
+
+        // Top placement attribute lists
+        $topLeftAttributes = [
+            'Sku / Item Code',
+            'Manufacturer',
+            'Country of Origin',
+            'Material',
+            'Color',
+            'Capacity',
+            'Width',
+            'Depth',
+            'Height'
+        ];
+
+        $topRightAttributes = [
+            'Type',
+            'Selling Unit',
+            'Warranty',
+            'Certification',
+            'Features'
+        ];
+
+        $customLeft = [];
+        $customRight = [];
+        $remaining = [];
+
+        foreach ($filteredAttributes as $attribute) {
+            $name = $attribute->attribute->name;
+            $value = $attribute->attribute_value;
+
+            if (in_array($name, $topLeftAttributes)) {
+                $customLeft[] = ['attribute_name' => $name, 'attribute_value' => $value];
+            } elseif (in_array($name, $topRightAttributes)) {
+                $customRight[] = ['attribute_name' => $name, 'attribute_value' => $value];
+            } else {
+                $remaining[] = ['attribute_name' => $name, 'attribute_value' => $value];
+            }
+        }
+
+        // Split remaining into left/right
+        $mid = ceil(count($remaining) / 2);
+        $left = array_slice($remaining, 0, $mid);
+        $right = array_slice($remaining, $mid);
+
+        // Merge custom + remaining
+        $response = [
+            'left' => array_merge($customLeft, $left),
+            'right' => array_merge($customRight, $right),
+        ];
+
+        return response()->json($response);
+    }
+
     // public function getAttributesByProductWithGroup($productId)
     // {
     //         $productAttributes = ProductAttributes::with(['attribute.attributeGroups'])
