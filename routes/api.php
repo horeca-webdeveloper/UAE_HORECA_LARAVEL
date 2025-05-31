@@ -127,6 +127,9 @@ Route::middleware('auth:sanctum')->post('/save-for-later', [SaveForLaterControll
 Route::middleware('auth:sanctum')->get('/show-save-for-later', [SaveForLaterController::class, 'showSaveForLater']);
 Route::middleware('auth:sanctum')->post('/remove-from-save-for-later', [SaveForLaterController::class, 'removeFromSaveForLater']);
 
+Route::get('/products/brand/{brandId}/category/{categoryId?}', [BrandApiController::class, 'getProductsByBrandAndCategory']);
+Route::get('/brand/{id}/categories', [BrandApiController::class, 'getCategories']);
+
 
 // Products You May Like API Route
 Route::middleware('auth:sanctum')->get('/products-you-may-like', [ProductYouMayLikeController::class, 'getProductsYouMayLike']);

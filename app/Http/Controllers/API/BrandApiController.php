@@ -495,42 +495,197 @@ public function getAllHomeBrandProducts(Request $request)
 
 
     public function getAllBrandsAlphabetically(Request $request): JsonResponse
-{
-    $letter = strtoupper($request->query('letter')); // e.g. ?letter=B
+    {
+        $letter = strtoupper($request->query('letter')); // e.g. ?letter=B
 
-    $brandsQuery = Brand::where('status', 'published')
-        ->select('id', 'name', 'logo')
-        ->orderBy('name');
+        $brandsQuery = Brand::where('status', 'published')
+            ->select('id', 'name', 'logo')
+            ->orderBy('name');
 
-    if ($letter) {
-        $brandsQuery->where('name', 'LIKE', $letter . '%');
+        if ($letter) {
+            $brandsQuery->where('name', 'LIKE', $letter . '%');
+        }
+
+        $brands = $brandsQuery->get()->map(function ($brand) {
+            $brand->logo = $brand->logo ? asset($brand->logo) : null;
+            return $brand;
+        });
+
+        if ($letter) {
+            // Return filtered brands only
+            return response()->json([
+                'success' => true,
+                'message' => "Brands starting with letter '$letter'.",
+                'data' => $brands
+            ]);
+        } else {
+            // Return grouped by A-Z
+            $grouped = $brands->groupBy(function ($brand) {
+                return strtoupper(substr($brand->name, 0, 1));
+            })->sortKeys();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Brands grouped alphabetically.',
+                'data' => $grouped
+            ]);
+        }
     }
 
-    $brands = $brandsQuery->get()->map(function ($brand) {
-        $brand->logo = $brand->logo ? asset($brand->logo) : null;
-        return $brand;
-    });
+    public function getCategories($id)
+    {
+    $brand = Brand::with(['products.categories:id,name,image'])->findOrFail($id);
 
-    if ($letter) {
-        // Return filtered brands only
-        return response()->json([
-            'success' => true,
-            'message' => "Brands starting with letter '$letter'.",
-            'data' => $brands
-        ]);
-    } else {
-        // Return grouped by A-Z
-        $grouped = $brands->groupBy(function ($brand) {
-            return strtoupper(substr($brand->name, 0, 1));
-        })->sortKeys();
+    // Flatten and get unique categories, only with id and name
+    $categories = $brand->products
+        ->flatMap(function ($product) {
+            return $product->categories->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'image' => asset('storage/' . $category->image), // full URL
+                ];
+            });
+        })
+        ->unique('id')
+        ->values();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Brands grouped alphabetically.',
-            'data' => $grouped
-        ]);
+    return response()->json([
+        'sucess' => 'true',
+        'brand_id' => $id,
+        'categories' => $categories
+    ]);
     }
-}
+
+
+
+
+
+    public function getProductsByBrandAndCategory(Request $request, $brandId, $categoryId = null)
+    {
+    try {
+        $brand = Brand::with(['products.categories'])->findOrFail($brandId);
+
+        // Get all brand products or filter by category
+        $filteredProducts = is_null($categoryId)
+            ? $brand->products
+            : $brand->products->filter(function ($product) use ($categoryId) {
+                return $product->categories->contains('id', $categoryId);
+            })->values();
+
+        if ($filteredProducts->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'No products found for this brand' . ($categoryId ? ' and category' : ''),
+                'data' => [],
+                'pagination' => $this->emptyPagination(),
+            ]);
+        }
+
+        $productIds = $filteredProducts->pluck('id')->toArray();
+
+        $productsWithRelations = Product::whereIn('id', $productIds)
+            ->with([
+                'reviews:id,product_id,star',
+                'currency',
+                'specifications',
+            ])
+            ->get()
+            ->keyBy('id');
+
+        $perPage = 50;
+        $page = max(1, (int) $request->input('page', 1));
+        $total = count($productIds);
+        $offset = ($page - 1) * $perPage;
+        $paginatedProducts = $filteredProducts->slice($offset, $perPage);
+
+        $pagination = $this->buildPagination($page, $perPage, $total);
+
+        $transformedProducts = $paginatedProducts->map(function ($product) use ($productsWithRelations) {
+            $productWithRelations = $productsWithRelations->get($product->id) ?? $product;
+
+            $images = $this->normalizeMediaUrls($product->images);
+            $videos = $this->normalizeMediaUrls($product->video_path);
+
+            $totalReviews = $productWithRelations->reviews ? $productWithRelations->reviews->count() : 0;
+            $avgRating = $totalReviews > 0 ? $productWithRelations->reviews->avg('star') : null;
+
+            $quantity = $product->quantity ?? 0;
+            $unitsSold = $product->units_sold ?? 0;
+            $leftStock = $quantity - $unitsSold;
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'images' => $images,
+                'video_url' => $product->video_url,
+                'video_path' => $videos,
+                'sku' => $product->sku,
+                'original_price' => $product->price,
+                'front_sale_price' => $product->price,
+                'sale_price' => $product->sale_price,
+                'price' => $product->price,
+                'start_date' => $product->start_date,
+                'end_date' => $product->end_date,
+                'warranty_information' => $product->warranty_information,
+                'currency' => $productWithRelations->currency?->title,
+                'total_reviews' => $totalReviews,
+                'avg_rating' => $avgRating,
+                'best_price' => $product->sale_price ?? $product->price,
+                'best_delivery_date' => null,
+                'leftStock' => $leftStock,
+                'currency_title' => $productWithRelations->currency
+                    ? ($productWithRelations->currency->is_prefix_symbol
+                        ? $productWithRelations->currency->title
+                        : ($product->price . ' ' . $productWithRelations->currency->title))
+                    : $product->price,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $transformedProducts->values(),
+            'pagination' => $pagination,
+            'message' => 'Products retrieved successfully',
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Error in getProductsByBrandAndCategory: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'An error occurred while fetching products',
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+    }
+
+    protected function emptyPagination()
+    {
+        return [
+            'total' => 0,
+            'per_page' => 0,
+            'current_page' => 1,
+            'last_page' => 1,
+        ];
+    }
+
+    protected function buildPagination($page, $perPage, $total)
+    {
+        return [
+            'total' => $total,
+            'per_page' => $perPage,
+            'current_page' => $page,
+            'last_page' => ceil($total / $perPage),
+        ];
+    }
+
+    protected function normalizeMediaUrls($media)
+    {
+        if (is_array($media)) {
+            return array_map(fn ($url) => url($url), $media);
+        }
+        return $media ? url($media) : null;
+    }
+
     
 }
 
