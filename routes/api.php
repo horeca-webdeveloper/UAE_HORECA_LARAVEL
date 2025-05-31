@@ -128,6 +128,14 @@ Route::middleware('auth:sanctum')->get('/show-save-for-later', [SaveForLaterCont
 Route::middleware('auth:sanctum')->post('/remove-from-save-for-later', [SaveForLaterController::class, 'removeFromSaveForLater']);
 
 
+// Products You May Like API Route
+Route::middleware('auth:sanctum')->get('/products-you-may-like', [ProductYouMayLikeController::class, 'getProductsYouMayLike']);
+
+// Alternative route with product_id as path parameter
+Route::middleware('auth:sanctum')->get('/products/{product_id}/you-may-like', [ProductYouMayLikeController::class, 'getProductsYouMayLike']);
+Route::get('/products/{product_id}/you-may-like-guest', [ProductYouMayLikeController::class, 'getProductsYouMayLikeGuest']);
+
+
 
 Route::middleware('auth:sanctum')->get('/customer/coupons', [CustomerCouponApiController::class, 'getCustomerCoupons']);
 Route::middleware('auth:sanctum')->get('/customer/search-coupon', [CustomerCouponApiController::class, 'searchCustomerCoupons']);
