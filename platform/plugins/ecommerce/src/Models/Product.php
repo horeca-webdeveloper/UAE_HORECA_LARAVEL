@@ -920,6 +920,13 @@ class Product extends BaseModel
         ->orderBy('product_you_may_like_items.priority', 'asc');
     }
     
+    public function sellingUnitAttribute()
+	{
+		return $this->hasOne(ProductAttributes::class)
+		->whereHas('attributeDetails', function ($query) {
+			$query->where('name', 'Selling Unit');
+		});
+	}
 
 
 }
