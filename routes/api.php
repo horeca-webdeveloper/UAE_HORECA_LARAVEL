@@ -54,6 +54,8 @@ use App\Http\Controllers\API\CountryController;
 use App\Http\Controllers\API\ProductAttributeController;
 use App\Http\Controllers\API\SEOManagementController;
 use App\Http\Controllers\API\BrandPageController;
+use App\Http\Controllers\API\ProductYouMayLikeController;
+
 
 use App\Http\Controllers\API\FaqApiController;
 
@@ -136,6 +138,7 @@ Route::middleware('auth:sanctum')->get('/products-you-may-like', [ProductYouMayL
 
 // Alternative route with product_id as path parameter
 Route::middleware('auth:sanctum')->get('/products/{product_id}/you-may-like', [ProductYouMayLikeController::class, 'getProductsYouMayLike']);
+
 Route::get('/products/{product_id}/you-may-like-guest', [ProductYouMayLikeController::class, 'getProductsYouMayLikeGuest']);
 
 
