@@ -191,8 +191,16 @@ class ProductApiController extends Controller
                             return $video; // Already a full URL, just return it
                         });
 
-                        $product->sellingUnitAttribute->attribute_value ?? null;
-
+                        if ($product->sellingUnitAttribute && $product->sellingUnitAttribute->attribute_value) {
+                            $fullValue = $product->sellingUnitAttribute->attribute_value;
+                            if (strpos($fullValue, '/') !== false) {
+                                $parts = explode('/', $fullValue);
+                                $product->sellingUnitAttribute->attribute_value_unit = trim($parts[1]);
+                            } else {
+                                $product->sellingUnitAttribute->attribute_value_unit = $fullValue;
+                            }
+                        }
+                        
                         // Add review and stock details
                         $totalReviews = $product->reviews->count();
                         $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
@@ -564,8 +572,16 @@ class ProductApiController extends Controller
                     $product->video_path = collect($videoPaths)->map(function ($video) {
                         return $video;
                     });
-                    $product->sellingUnitAttribute->attribute_value ?? null;
-                        // Add review and stock details
+                    if ($product->sellingUnitAttribute && $product->sellingUnitAttribute->attribute_value) {
+                        $fullValue = $product->sellingUnitAttribute->attribute_value;
+                        if (strpos($fullValue, '/') !== false) {
+                            $parts = explode('/', $fullValue);
+                            $product->sellingUnitAttribute->attribute_value_unit = trim($parts[1]);
+                        } else {
+                            $product->sellingUnitAttribute->attribute_value_unit = $fullValue;
+                        }
+                    }
+                                            // Add review and stock details
                         $totalReviews = $product->reviews->count();
                         $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
                         $quantity = $product->quantity ?? 0;
@@ -968,8 +984,16 @@ class ProductApiController extends Controller
             $product->video_path = collect($videoPaths)->map(function ($video) {
                 return $video;
             });
-            $product->sellingUnitAttribute->attribute_value ?? null;
-
+            if ($product->sellingUnitAttribute && $product->sellingUnitAttribute->attribute_value) {
+                $fullValue = $product->sellingUnitAttribute->attribute_value;
+                if (strpos($fullValue, '/') !== false) {
+                    $parts = explode('/', $fullValue);
+                    $product->sellingUnitAttribute->attribute_value_unit = trim($parts[1]);
+                } else {
+                    $product->sellingUnitAttribute->attribute_value_unit = $fullValue;
+                }
+            }
+            
             $totalReviews = $product->reviews->count();
             $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
             $quantity = $product->quantity ?? 0;
@@ -1278,8 +1302,16 @@ class ProductApiController extends Controller
                             $product->video_path = collect($videoPaths)->map(function ($video) {
                                 return $video;
                             });
-                            $product->sellingUnitAttribute->attribute_value ?? null;
-
+                            if ($product->sellingUnitAttribute && $product->sellingUnitAttribute->attribute_value) {
+                                $fullValue = $product->sellingUnitAttribute->attribute_value;
+                                if (strpos($fullValue, '/') !== false) {
+                                    $parts = explode('/', $fullValue);
+                                    $product->sellingUnitAttribute->attribute_value_unit = trim($parts[1]);
+                                } else {
+                                    $product->sellingUnitAttribute->attribute_value_unit = $fullValue;
+                                }
+                            }
+                            
                             $totalReviews = $product->reviews->count();
                             $avgRating = $totalReviews > 0 ? $product->reviews->avg('star') : null;
                             $quantity = $product->quantity ?? 0;
