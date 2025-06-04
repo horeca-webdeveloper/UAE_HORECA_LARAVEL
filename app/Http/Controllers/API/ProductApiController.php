@@ -71,12 +71,6 @@ class ProductApiController extends Controller
                 // Calculate min-max values only for filtered products
                 $priceMin = Product::whereIn('id', $filteredProductIds)->min('sale_price');
                 $priceMax = Product::whereIn('id', $filteredProductIds)->max('sale_price');
-                $lengthMin = Product::whereIn('id', $filteredProductIds)->min('length');
-                $lengthMax = Product::whereIn('id', $filteredProductIds)->max('length');
-                $widthMin = Product::whereIn('id', $filteredProductIds)->min('width');
-                $widthMax = Product::whereIn('id', $filteredProductIds)->max('width');
-                $heightMin = Product::whereIn('id', $filteredProductIds)->min('height');
-                $heightMax = Product::whereIn('id', $filteredProductIds)->max('height');
 
                 $DeliveryMin = Product::whereIn('id', $filteredProductIds)
                     ->whereNotNull('delivery_days')
@@ -421,15 +415,8 @@ class ProductApiController extends Controller
                         'brands' => $brands,
                         'categories' => $categories,
                         'price_min' => $priceMin,
-                        'price_max' => $priceMax,
-                        'length_min' => $lengthMin,
-                        'length_max' => $lengthMax,
-                        'width_min' => $widthMin,
-                        'width_max' => $widthMax,
-                        'height_min' => $heightMin,
-                        'height_max' => $heightMax,
-                        'delivery_min' => $DeliveryMin,
-                        'delivery_max' => $DeliveryMax,
+                        'price_max' => $priceMax
+            
                     ]);
     }
 
@@ -455,12 +442,7 @@ class ProductApiController extends Controller
                 // Calculate min-max values only for filtered products
                 $priceMin = Product::whereIn('id', $filteredProductIds)->min('sale_price');
                 $priceMax = Product::whereIn('id', $filteredProductIds)->max('sale_price');
-                $lengthMin = Product::whereIn('id', $filteredProductIds)->min('length');
-                $lengthMax = Product::whereIn('id', $filteredProductIds)->max('length');
-                $widthMin = Product::whereIn('id', $filteredProductIds)->min('width');
-                $widthMax = Product::whereIn('id', $filteredProductIds)->max('width');
-                $heightMin = Product::whereIn('id', $filteredProductIds)->min('height');
-                $heightMax = Product::whereIn('id', $filteredProductIds)->max('height');
+              
 
                 $DeliveryMin = Product::whereIn('id', $filteredProductIds)
                     ->whereNotNull('delivery_days')
@@ -804,15 +786,8 @@ class ProductApiController extends Controller
                         'brands' => $brands,
                         // 'categories' => $categories,
                         'price_min' => $priceMin,
-                        'price_max' => $priceMax,
-                        'length_min' => $lengthMin,
-                        'length_max' => $lengthMax,
-                        'width_min' => $widthMin,
-                        'width_max' => $widthMax,
-                        'height_min' => $heightMin,
-                        'height_max' => $heightMax,
-                        'delivery_min' => $DeliveryMin,
-                        'delivery_max' => $DeliveryMax,
+                        'price_max' => $priceMax
+        
                     ]);
     }
 
@@ -854,13 +829,7 @@ class ProductApiController extends Controller
         // Calculate min-max values only for filtered products
         $priceMin = Product::whereIn('id', $filteredProductIds)->min('sale_price');
         $priceMax = Product::whereIn('id', $filteredProductIds)->max('sale_price');
-        $lengthMin = Product::whereIn('id', $filteredProductIds)->min('length');
-        $lengthMax = Product::whereIn('id', $filteredProductIds)->max('length');
-        $widthMin = Product::whereIn('id', $filteredProductIds)->min('width');
-        $widthMax = Product::whereIn('id', $filteredProductIds)->max('width');
-        $heightMin = Product::whereIn('id', $filteredProductIds)->min('height');
-        $heightMax = Product::whereIn('id', $filteredProductIds)->max('height');
-
+      
         $DeliveryMin = Product::whereIn('id', $filteredProductIds)
             ->whereNotNull('delivery_days')
             ->selectRaw('MIN(CAST(delivery_days AS UNSIGNED)) as min_delivery_days')
@@ -1037,15 +1006,8 @@ class ProductApiController extends Controller
                 'brands' => $brands,
                 // 'categories' => $categories,
                 'price_min' => $priceMin,
-                'price_max' => $priceMax,
-                'length_min' => $lengthMin,
-                'length_max' => $lengthMax,
-                'width_min' => $widthMin,
-                'width_max' => $widthMax,
-                'height_min' => $heightMin,
-                'height_max' => $heightMax,
-                'delivery_min' => $DeliveryMin,
-                'delivery_max' => $DeliveryMax,
+                'price_max' => $priceMax
+             
             ]);
     }
 
@@ -1197,12 +1159,7 @@ class ProductApiController extends Controller
                         // Calculate min-max values only for filtered products
                         $priceMin = Product::whereIn('id', $filteredProductIds)->min('sale_price');
                         $priceMax = Product::whereIn('id', $filteredProductIds)->max('sale_price');
-                        $lengthMin = Product::whereIn('id', $filteredProductIds)->min('length');
-                        $lengthMax = Product::whereIn('id', $filteredProductIds)->max('length');
-                        $widthMin = Product::whereIn('id', $filteredProductIds)->min('width');
-                        $widthMax = Product::whereIn('id', $filteredProductIds)->max('width');
-                        $heightMin = Product::whereIn('id', $filteredProductIds)->min('height');
-                        $heightMax = Product::whereIn('id', $filteredProductIds)->max('height');
+                      
 
                         $DeliveryMin = Product::whereIn('id', $filteredProductIds)
                             ->whereNotNull('delivery_days')
@@ -1355,15 +1312,7 @@ class ProductApiController extends Controller
                                 'brands' => $brands,
                                 // 'categories' => $categories,
                                 'price_min' => $priceMin,
-                                'price_max' => $priceMax,
-                                'length_min' => $lengthMin,
-                                'length_max' => $lengthMax,
-                                'width_min' => $widthMin,
-                                'width_max' => $widthMax,
-                                'height_min' => $heightMin,
-                                'height_max' => $heightMax,
-                                'delivery_min' => $DeliveryMin,
-                                'delivery_max' => $DeliveryMax,
+                                'price_max' => $priceMax
                             ]);
             }
 
@@ -1502,15 +1451,7 @@ class ProductApiController extends Controller
                 $query->where('created_at', '<=', $request->input('end_date'));
             }
 
-            // Boolean filters
-            if ($request->has('allow_checkout_when_out_of_stock')) {
-                $query->where('allow_checkout_when_out_of_stock', $request->input('allow_checkout_when_out_of_stock'));
-            }
-
-            if ($request->has('with_storehouse_management')) {
-                $query->where('with_storehouse_management', $request->input('with_storehouse_management'));
-            }
-
+        
             if ($request->has('is_featured')) {
                 $query->where('is_featured', $request->input('is_featured'));
             }
@@ -1518,64 +1459,12 @@ class ProductApiController extends Controller
             if ($request->has('is_variation')) {
                 $query->where('is_variation', $request->input('is_variation'));
             }
-
-            // Variation filters
-            if ($request->has('variant_grams')) {
-                $query->where('variant_grams', $request->input('variant_grams'));
-            }
-
-            if ($request->has('variant_inventory_quantity')) {
-                $query->where('variant_inventory_quantity', $request->input('variant_inventory_quantity'));
-            }
-
-            if ($request->has('variant_inventory_policy')) {
-                $query->where('variant_inventory_policy', $request->input('variant_inventory_policy'));
-            }
-
             if ($request->has('variant_fulfillment_service')) {
                 $query->where('variant_fulfillment_service', $request->input('variant_fulfillment_service'));
             }
 
             if ($request->has('variant_requires_shipping')) {
                 $query->where('variant_requires_shipping', $request->input('variant_requires_shipping'));
-            }
-
-            if ($request->has('variant_barcode')) {
-                $query->where('variant_barcode', $request->input('variant_barcode'));
-            }
-
-            // Dimension filters
-            if ($request->has('length_min')) {
-                $query->where('length', '>=', $request->input('length_min'));
-            }
-
-            if ($request->has('length_max')) {
-                $query->where('length', '<=', $request->input('length_max'));
-            }
-
-            if ($request->has('width_min')) {
-                $query->where('width', '>=', $request->input('width_min'));
-            }
-
-            if ($request->has('width_max')) {
-                $query->where('width', '<=', $request->input('width_max'));
-            }
-
-            if ($request->has('height_min')) {
-                $query->where('height', '>=', $request->input('height_min'));
-            }
-
-            if ($request->has('height_max')) {
-                $query->where('height', '<=', $request->input('height_max'));
-            }
-
-            // Weight filters
-            if ($request->has('weight_min')) {
-                $query->where('weight', '>=', $request->input('weight_min'));
-            }
-
-            if ($request->has('weight_max')) {
-                $query->where('weight', '<=', $request->input('weight_max'));
             }
 
             if ($request->has('rating')) {
