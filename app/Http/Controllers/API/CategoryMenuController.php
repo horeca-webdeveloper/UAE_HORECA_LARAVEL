@@ -48,7 +48,7 @@ class CategoryMenuController extends Controller
                 'slug' => $category->slug,
                 'parent_id' => $category->parent_id,
                 'productCount' => $category->products_count, // Eager-loaded product count
-                'image' => RvMedia::getImageUrl($category->image), // Full image URL
+                'image' => $category->image, // Full image URL
                 'children' => [],
             ];
         }
