@@ -39,12 +39,12 @@ class CategoryController extends Controller
 		$categoriesTree = $this->buildTree($categories, $filterId, $limit);
 
 		// Add full URLs for images (both parent and child categories)
-		foreach ($categoriesTree as $category) {
-			$category->image = $this->getImageUrl($category->image); // Modify image for parent category
+		// foreach ($categoriesTree as $category) {
+		// 	$category->image = $this->getImageUrl($category->image); // Modify image for parent category
 
-			// Recursively modify images for children and children's children
-			$this->addImageUrlsRecursively($category);
-		}
+		// 	// Recursively modify images for children and children's children
+		// 	$this->addImageUrlsRecursively($category);
+		// }
 
 		return response()->json($categoriesTree);
 	}
