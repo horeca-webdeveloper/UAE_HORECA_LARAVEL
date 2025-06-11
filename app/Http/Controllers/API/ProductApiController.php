@@ -156,13 +156,13 @@ class ProductApiController extends Controller
                             $product->description = json_decode($product->description, true);
                         }
 
-                        if ($product->brand) {
-                            $product->brand_id = $product->brand->id;
-                            $product->brand_name = $product->brand->name;
-                            $product->brand_logo = $product->brand->logo;
+                        if ($products->brand) {
+                            $products->brand_id = $products->brand->id;
+                            $products->brand_name = $products->brand->name;
+                            $products->brand_logo = $products->brand->logo;
                         
                             // Get all reviews of all products under this brand
-                            $brandReviews = $product->brand->products->flatMap(function ($p) {
+                            $brandReviews = $products->brand->products->flatMap(function ($p) {
                                 return $p->reviews;
                             });
                         
@@ -171,8 +171,8 @@ class ProductApiController extends Controller
                                 ? round($brandReviews->avg('star'), 1)
                                 : null;
                         
-                            $product->brand_avg_rating = $brandAvgRating;
-                            $product->brand_review_count = $brandReviewCount;
+                            $products->brand_avg_rating = $brandAvgRating;
+                            $products->brand_review_count = $brandReviewCount;
                         }
                         
 
@@ -443,13 +443,10 @@ class ProductApiController extends Controller
     public function getAllPublicProducts(Request $request)
     {
 
-
-
-                // Start building the base query
-                $query = Product::with(['categories', 'brand', 'tags', 'producttypes'])
+              // Start building the base query
+                $query = Product::with(['categories', 'brand', 'brand.products.reviews'])
                     ->where('status', 'published');
 
-                // Apply filters
                 $this->applyFilters($query, $request);
 
                 // Log query for debugging
@@ -547,6 +544,26 @@ class ProductApiController extends Controller
                         if (is_string($product->description)) {
                             $product->description = json_decode($product->description, true);
                         }
+
+                        if ($product->brand) {
+                            $product->brand_id = $product->brand->id;
+                            $product->brand_name = $product->brand->name;
+                            $product->brand_logo = $product->brand->logo;
+                        
+                            // Get all reviews of all products under this brand
+                            $brandReviews = $product->brand->products->flatMap(function ($p) {
+                                return $p->reviews;
+                            });
+                        
+                            $brandReviewCount = $brandReviews->count();
+                            $brandAvgRating = $brandReviewCount > 0
+                                ? round($brandReviews->avg('star'), 1)
+                                : null;
+                        
+                            $product->brand_avg_rating = $brandAvgRating;
+                            $product->brand_review_count = $brandReviewCount;
+                        }
+                        
 
 
                         // Handle images
@@ -786,8 +803,8 @@ class ProductApiController extends Controller
                         }
 
                         // Add tags and types
-                        $product->tags = $product->tags;
-                        $product->producttypes = $product->producttypes;
+                        // $product->tags = $product->tags;
+                        // $product->producttypes = $product->producttypes;
                         $product->category_list = $product->categories->map(function ($category) {
                             return [
                                 'id' => $category->id,
